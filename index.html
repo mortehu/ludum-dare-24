@@ -1,32 +1,35 @@
-<script id="shader-fs" type="x-shader/x-fragment">
+<!DOCTYPE html>
+<script id='shader-fs' type='x-shader/x-fragment'>
   precision mediump float;
-  varying vec2 vTextureCoord;
+  varying vec2 var_TextureCoord;
 
-  uniform sampler2D uSampler;
-
-  void main (void)
-  {
-    gl_FragColor = texture2D (uSampler, vec2 (vTextureCoord.s, vTextureCoord.t));
-  }
-</script>
-<script id="shader-vs" type="x-shader/x-vertex">
-  attribute vec3 aVertexPosition;
-  attribute vec2 aTextureCoord;
-
-  uniform mat4 uMVMatrix;
-  uniform mat4 uPMatrix;
-
-  varying vec2 vTextureCoord;
+  uniform sampler2D uniform_Sampler;
 
   void main (void)
   {
-    gl_Position = uPMatrix * uMVMatrix * vec4 (aVertexPosition, 1.0);
-    vTextureCoord = aTextureCoord;
+    gl_FragColor = texture2D (uniform_Sampler, vec2 (var_TextureCoord.s, var_TextureCoord.t));
   }
 </script>
-<script src='gl-matrix-min.js'></script>
+<script id='shader-vs' type='x-shader/x-vertex'>
+  attribute vec3 attr_VertexPosition;
+  attribute vec2 attr_TextureCoord;
+
+  uniform vec2 uniform_WindowSize;
+
+  varying vec2 var_TextureCoord;
+
+  void main (void)
+  {
+    gl_Position = vec4(-1.0 + (attr_VertexPosition.x * uniform_WindowSize.x) * 2.0,
+                        1.0 - (attr_VertexPosition.y * uniform_WindowSize.y) * 2.0, 0.0, 1.0);
+    var_TextureCoord = attr_TextureCoord;
+  }
+</script>
 <script src='webgl-utils.js'></script>
 <script src='game.js'></script>
-<body onload="GameStart();">
-  <canvas id="game-canvas" style="border: none;" width="800" height="600"></canvas>
+<style>
+  body { background: #000; margin: 0; padding: 0; }
+</style>
+<body onload='GAME_Init ();'>
+  <canvas id='game-canvas' width=800 height=600 style='width: 800px; height: 600px; border: 2px solid #555; display: block; margin: 20px auto'></canvas>
 </body>

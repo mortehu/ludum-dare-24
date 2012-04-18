@@ -1,16 +1,15 @@
 var gl;
-var pMatrix = mat4.create ();
-var mvMatrix = mat4.create ();
-var lastTime = 0;
 
-var triangleVertexPositionBuffer;
-var texCoordBuffer;
-var myTexture;
+/***********************************************************************/
 
-function GameSetupShaders ()
+var DRAW_vertices = new Array ();
+var DRAW_textureCoords = new Array ();
+var DRAW_currentTexture;
+
+function DRAW_SetupShaders ()
 {
-  var fragmentShader = getShader (gl, "shader-fs");
-  var vertexShader = getShader (gl, "shader-vs");
+  var fragmentShader = DRAW_GetShaderFromElement ("shader-fs");
+  var vertexShader = DRAW_GetShaderFromElement ("shader-vs");
 
   shaderProgram = gl.createProgram ();
   gl.attachShader (shaderProgram, vertexShader);
@@ -18,30 +17,29 @@ function GameSetupShaders ()
   gl.linkProgram (shaderProgram);
 
   if (!gl.getProgramParameter (shaderProgram, gl.LINK_STATUS))
-  {
-    alert ("Could not initialise shaders");
+    {
+      alert ("Could not initialise shaders");
 
-    return;
-  }
+      return;
+    }
 
   gl.useProgram (shaderProgram);
 
-  shaderProgram.vertexPositionAttribute = gl.getAttribLocation (shaderProgram, "aVertexPosition");
+  shaderProgram.vertexPositionAttribute = gl.getAttribLocation (shaderProgram, "attr_VertexPosition");
   gl.enableVertexAttribArray (shaderProgram.vertexPositionAttribute);
 
-  shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
-  gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+  shaderProgram.textureCoordAttribute = gl.getAttribLocation (shaderProgram, "attr_TextureCoord");
+  gl.enableVertexAttribArray (shaderProgram.textureCoordAttribute);
 
-  shaderProgram.pMatrixUniform = gl.getUniformLocation (shaderProgram, "uPMatrix");
-  shaderProgram.mvMatrixUniform = gl.getUniformLocation (shaderProgram, "uMVMatrix");
-  shaderProgram.samplerUniform = gl.getUniformLocation (shaderProgram, "uSampler");
+  gl.uniform2f (gl.getUniformLocation (shaderProgram, "uniform_WindowSize"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight);
+  gl.uniform1i (gl.getUniformLocation (shaderProgram, "uniform_Sampler"), 0);
 }
 
-function getShader (gl, id)
+function DRAW_GetShaderFromElement (id)
 {
   var shader, shaderScript;
   var str = "", k;
-  
+
   shaderScript = document.getElementById (id);
 
   if (!shaderScript)
@@ -50,12 +48,12 @@ function getShader (gl, id)
   k = shaderScript.firstChild;
 
   while (k)
-  {
-    if (k.nodeType == 3)
-      str += k.textContent;
+    {
+      if (k.nodeType == 3)
+        str += k.textContent;
 
-    k = k.nextSibling;
-  }
+      k = k.nextSibling;
+    }
 
   if (shaderScript.type == "x-shader/x-fragment")
     shader = gl.createShader (gl.FRAGMENT_SHADER);
@@ -77,59 +75,163 @@ function getShader (gl, id)
   return shader;
 }
 
-function GameSetupBuffers ()
+function DRAW_LoadTexture (url)
 {
-   triangleVertexPositionBuffer = gl.createBuffer ();
-   gl.bindBuffer (gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+  result = gl.createTexture ();
+  result.image = new Image ();
+  result.image.src = url;
+  result.image.onload = function () { DRAW_HandleLoadedTexture (result) };
 
-   var vertices =
-     [
-        0.0,  1.0, 0.0,
-       -1.0, -1.0, 0.0,
-        1.0, -1.0, 0.0
-     ];
-
-   gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (vertices), gl.STATIC_DRAW);
-   triangleVertexPositionBuffer.itemSize = 3;
-   triangleVertexPositionBuffer.numItems = 3;
-
-   texCoordBuffer = gl.createBuffer();
-   gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-   var textureCoords =
-     [
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-     ];
-   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
-   texCoordBuffer.itemSize = 2;
-   texCoordBuffer.numItems = 3;
+  return result;
 }
 
-function GameSetupTextures ()
+function DRAW_HandleLoadedTexture (texture)
 {
-  myTexture = gl.createTexture();
-  myTexture.image = new Image();
-  myTexture.image.src = "earth0000.png";
-  myTexture.image.onload = function() { handleLoadedTexture(myTexture) };
+  gl.bindTexture (gl.TEXTURE_2D, texture);
+  gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+  gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.generateMipmap (gl.TEXTURE_2D);
 }
 
-function handleLoadedTexture(texture)
+function DRAW_Flush ()
 {
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  var vertexCount;
+
+  vertexCount = DRAW_vertices.length / 2;
+
+  if (!vertexCount)
+    return;
+
+  gl.activeTexture (gl.TEXTURE0);
+  gl.bindTexture (gl.TEXTURE_2D, DRAW_currentTexture);
+
+  vertexPositionBuffer = gl.createBuffer ();
+  gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
+  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_vertices), gl.STATIC_DRAW);
+  vertexPositionBuffer.itemSize = 2;
+
+  texCoordBuffer = gl.createBuffer ();
+  gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_textureCoords), gl.STATIC_DRAW);
+  texCoordBuffer.itemSize = 2;
+
+  gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.vertexAttribPointer (shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+
+  gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
+  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 2, gl.FLOAT, false, 0, 0);
+
+  gl.drawArrays (gl.TRIANGLES, 0, vertexCount);
+
+  DRAW_vertices.length = 0;
+  DRAW_textureCoords.length = 0;
+
+  gl.deleteBuffer (texCoordBuffer);
+  gl.deleteBuffer (vertexPositionBuffer);
 }
 
-var x = 0;
+function DRAW_AddQuad (texture, x, y, width, height)
+{
+  if (texture != DRAW_currentTexture)
+    DRAW_Flush ();
 
-function GameUpdate ()
+  DRAW_currentTexture = texture;
+
+  DRAW_vertices.push (x);
+  DRAW_vertices.push (y);
+
+  DRAW_vertices.push (x);
+  DRAW_vertices.push (y + height);
+
+  DRAW_vertices.push (x + width);
+  DRAW_vertices.push (y + height);
+
+  DRAW_vertices.push (x);
+  DRAW_vertices.push (y);
+
+  DRAW_vertices.push (x + width);
+  DRAW_vertices.push (y + height);
+
+  DRAW_vertices.push (x + width);
+  DRAW_vertices.push (y);
+
+  DRAW_textureCoords.push (0.0);
+  DRAW_textureCoords.push (0.0);
+
+  DRAW_textureCoords.push (0.0);
+  DRAW_textureCoords.push (1.0);
+
+  DRAW_textureCoords.push (1.0);
+  DRAW_textureCoords.push (1.0);
+
+  DRAW_textureCoords.push (0.0);
+  DRAW_textureCoords.push (0.0);
+
+  DRAW_textureCoords.push (1.0);
+  DRAW_textureCoords.push (1.0);
+
+  DRAW_textureCoords.push (1.0);
+  DRAW_textureCoords.push (0.0);
+}
+
+/***********************************************************************/
+
+var keys = {};
+var lastTime = 0;
+
+function SYS_Init ()
+{
+  var canvas = document.getElementById ("game-canvas");
+
+  if (!(gl = WebGLUtils.setupWebGL (canvas)))
+    return;
+
+
+  document.onkeydown = function (event) { keys[String.fromCharCode (event.keyCode)] = true; };
+  document.onkeyup = function (event) { keys[String.fromCharCode (event.keyCode)] = false; };
+
+  gl.viewportWidth = canvas.width;
+  gl.viewportHeight = canvas.height;
+
+  gl.viewport (0, 0, gl.viewportWidth, gl.viewportHeight);
+
+  DRAW_SetupShaders ();
+
+  gl.clearColor (0.0, 0.0, 0.0, 1.0);
+  gl.enable (gl.DEPTH_TEST);
+
+  gl.enable (gl.BLEND);
+  gl.blendFunc (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+}
+
+/***********************************************************************/
+
+var x = 0, y = 0;
+var earth;
+var elapsed = 0;
+
+function GAME_SetupTextures ()
+{
+  earth = DRAW_LoadTexture ("placeholder.png");
+}
+
+function GAME_Init ()
+{
+  SYS_Init ();
+
+  GAME_SetupTextures ();
+
+  x = (gl.viewportWidth - 100) * 0.5;
+  y = (gl.viewportHeight - 100) * 0.5;
+
+  GAME_Update ();
+}
+
+function GAME_Update ()
 {
   var timeNow, deltaTime;
-
-  requestAnimFrame (GameUpdate);
 
   timeNow = new Date ().getTime ();
   deltaTime = timeNow - lastTime;
@@ -137,49 +239,17 @@ function GameUpdate ()
   if (deltaTime < 0 || deltaTime > 0.05)
     deltaTime = 0.05;
 
-  gl.viewport (0, 0, gl.viewportWidth, gl.viewportHeight);
   gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  mat4.identity (pMatrix);
-  mat4.perspective (45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+  if (keys['W']) y -= deltaTime * 10.0;
+  if (keys['A']) x -= deltaTime * 10.0;
+  if (keys['S']) y += deltaTime * 10.0;
+  if (keys['D']) x += deltaTime * 10.0;
 
-  x += deltaTime;
+  DRAW_AddQuad (earth, x, y, 128.0, 128.0);
+  DRAW_Flush ();
 
-  mat4.identity (mvMatrix);
-  mat4.translate (mvMatrix, [-1.5, 0.0, -5 - 0.1 * x]);
+  elapsed += deltaTime;
 
-  gl.uniformMatrix4fv (shaderProgram.pMatrixUniform, false, pMatrix);
-  gl.uniformMatrix4fv (shaderProgram.mvMatrixUniform, false, mvMatrix);
-
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, myTexture);
-  gl.uniform1i(shaderProgram.samplerUniform, 0);
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, texCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-  gl.bindBuffer (gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
-  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-  gl.drawArrays (gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
-}
-
-function GameStart ()
-{
-  var canvas = document.getElementById ("game-canvas");
-
-  if (!(gl = WebGLUtils.setupWebGL (canvas)))
-    return;
-
-  gl.viewportWidth = canvas.width;
-  gl.viewportHeight = canvas.height;
-
-  GameSetupShaders ();
-  GameSetupBuffers ();
-  GameSetupTextures ();
-
-  gl.clearColor (0.0, 0.0, 0.0, 1.0);
-  gl.enable (gl.DEPTH_TEST);
-
-  GameUpdate ();
+  requestAnimFrame (GAME_Update);
 }
