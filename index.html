@@ -2,27 +2,31 @@
 <script id='shader-fs' type='x-shader/x-fragment'>
   precision mediump float;
   varying vec2 var_TextureCoord;
+  varying float var_Alpha;
 
   uniform sampler2D uniform_Sampler;
 
   void main (void)
   {
     gl_FragColor = texture2D (uniform_Sampler, vec2 (var_TextureCoord.s, var_TextureCoord.t));
+    gl_FragColor.a *= var_Alpha;
   }
 </script>
 <script id='shader-vs' type='x-shader/x-vertex'>
-  attribute vec4 attr_VertexPosition;
+  attribute vec3 attr_VertexPosition;
   attribute vec2 attr_TextureCoord;
 
   uniform vec4 uniform_Camera;
 
   varying vec2 var_TextureCoord;
+  varying float var_Alpha;
 
   void main (void)
   {
     gl_Position = vec4(-1.0 + ((attr_VertexPosition.x - uniform_Camera.z) * uniform_Camera.x) * 2.0,
                         1.0 - ((attr_VertexPosition.y - uniform_Camera.w) * uniform_Camera.y) * 2.0, 0.0, 1.0);
     var_TextureCoord = attr_TextureCoord;
+    var_Alpha = attr_VertexPosition.z;
   }
 </script>
 <script src='webgl-utils.js'></script>

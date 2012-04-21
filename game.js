@@ -8,6 +8,7 @@ var DRAW_currentTexture;
 var DRAW_cameraX = -400.0, DRAW_cameraY = -300.0;
 var DRAW_cameraVelX = 0, DRAW_cameraVelY = 0;
 var DRAW_cameraNoiseX = 0.0, DRAW_cameraNoiseY = 0.0;
+var DRAW_alpha = 1.0;
 
 function DRAW_SetupShaders ()
 {
@@ -108,7 +109,7 @@ function DRAW_Flush ()
   var vertexPositionBuffer;
   var texCoordBuffer;
 
-  vertexCount = DRAW_vertices.length / 2;
+  vertexCount = DRAW_vertices.length / 3;
 
   if (!vertexCount)
     return;
@@ -118,18 +119,16 @@ function DRAW_Flush ()
   vertexPositionBuffer = gl.createBuffer ();
   gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
   gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_vertices), gl.STATIC_DRAW);
-  vertexPositionBuffer.itemSize = 2;
 
   texCoordBuffer = gl.createBuffer ();
   gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
   gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_textureCoords), gl.STATIC_DRAW);
-  texCoordBuffer.itemSize = 2;
 
   gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
   gl.vertexAttribPointer (shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
 
   gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 2, gl.FLOAT, false, 0, 0);
+  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
 
   gl.drawArrays (gl.TRIANGLES, 0, vertexCount);
 
@@ -138,6 +137,11 @@ function DRAW_Flush ()
 
   gl.deleteBuffer (texCoordBuffer);
   gl.deleteBuffer (vertexPositionBuffer);
+}
+
+function DRAW_SetAlpha (alpha)
+{
+  DRAW_alpha = alpha;
 }
 
 function DRAW_AddQuad (texture, x, y, width, height)
@@ -149,21 +153,27 @@ function DRAW_AddQuad (texture, x, y, width, height)
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_textureCoords.push (0.0);
   DRAW_textureCoords.push (0.0);
@@ -193,21 +203,27 @@ function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_alpha);
 
   DRAW_textureCoords.push (s0);
   DRAW_textureCoords.push (t0);
@@ -245,26 +261,32 @@ function DRAW_AddQuadAngle (texture, x, y, width, height, angle, flipped)
   /* D */
   DRAW_vertices.push (x + c * width * 0.5);
   DRAW_vertices.push (y + s * width * 0.5);
+  DRAW_vertices.push (DRAW_alpha);
 
   /* A */
   DRAW_vertices.push (x + c * width * 0.5 + s * height);
   DRAW_vertices.push (y + s * width * 0.5 - c * height);
+  DRAW_vertices.push (DRAW_alpha);
 
   /* B */
   DRAW_vertices.push (x - c * width * 0.5 + s * height);
   DRAW_vertices.push (y - s * width * 0.5 - c * height);
+  DRAW_vertices.push (DRAW_alpha);
 
   /* D */
   DRAW_vertices.push (x + c * width * 0.5);
   DRAW_vertices.push (y + s * width * 0.5);
+  DRAW_vertices.push (DRAW_alpha);
 
   /* B */
   DRAW_vertices.push (x - c * width * 0.5 + s * height);
   DRAW_vertices.push (y - s * width * 0.5 - c * height);
+  DRAW_vertices.push (DRAW_alpha);
 
   /* C */
   DRAW_vertices.push (x - c * width * 0.5);
   DRAW_vertices.push (y - s * width * 0.5);
+  DRAW_vertices.push (DRAW_alpha);
 
   if (flipped)
     {
@@ -320,12 +342,15 @@ function DRAW_AddCircle (texture, x, y, radius)
 
     DRAW_vertices.push (s0 * radius + x);
     DRAW_vertices.push (c0 * radius + y);
+    DRAW_vertices.push (DRAW_alpha);
 
     DRAW_vertices.push (s1 * radius + x);
     DRAW_vertices.push (c1 * radius + y);
+    DRAW_vertices.push (DRAW_alpha);
 
     DRAW_vertices.push (x);
     DRAW_vertices.push (y);
+    DRAW_vertices.push (DRAW_alpha);
 
     DRAW_textureCoords.push (0.5 + 0.5 * s0);
     DRAW_textureCoords.push (0.5 - 0.5 * c0);
@@ -339,70 +364,6 @@ function DRAW_AddCircle (texture, x, y, radius)
     s0 = s1;
     c0 = c1;
   }
-}
-
-function DRAW_DebugQuad (texture, x, y, width, height)
-{
-  var verts = [], texCoords = [];
-
-  verts.push (x);
-  verts.push (y);
-
-  verts.push (x);
-  verts.push (y + height);
-
-  verts.push (x + width);
-  verts.push (y + height);
-
-  verts.push (x);
-  verts.push (y);
-
-  verts.push (x + width);
-  verts.push (y + height);
-
-  verts.push (x + width);
-  verts.push (y);
-
-  texCoords.push (0.0);
-  texCoords.push (0.0);
-
-  texCoords.push (0.0);
-  texCoords.push (1.0);
-
-  texCoords.push (1.0);
-  texCoords.push (1.0);
-
-  texCoords.push (0.0);
-  texCoords.push (0.0);
-
-  texCoords.push (1.0);
-  texCoords.push (1.0);
-
-  texCoords.push (1.0);
-  texCoords.push (0.0);
-
-  gl.bindTexture (gl.TEXTURE_2D, texture);
-
-  var vertexPositionBuffer = gl.createBuffer ();
-  gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (verts), gl.STATIC_DRAW);
-  vertexPositionBuffer.itemSize = 2;
-
-  var texCoordBuffer = gl.createBuffer ();
-  gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (texCoords), gl.STATIC_DRAW);
-  texCoordBuffer.itemSize = 2;
-
-  gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.vertexAttribPointer (shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
-
-  gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 2, gl.FLOAT, false, 0, 0);
-
-  gl.drawArrays (gl.TRIANGLES, 0, 6);
-
-  gl.deleteBuffer (texCoordBuffer);
-  gl.deleteBuffer (vertexPositionBuffer);
 }
 
 /***********************************************************************/
@@ -721,8 +682,11 @@ function GAME_Draw ()
 
       length = Math.sqrt ((laser.toX - laser.fromX) * (laser.toX - laser.fromX) + (laser.toY - laser.fromY) * (laser.toY - laser.fromY));
 
+      DRAW_SetAlpha (1.0 - laser.age * 2.0);
       DRAW_AddQuadAngle (GFX_laser, laser.fromX, laser.fromY, 4.0, length, Math.atan2 (laser.toX - laser.fromX, laser.toY - laser.fromY));
     }
+
+  DRAW_SetAlpha (1.0);
 
   for (var i = 0; i < planets.length; ++i)
     {
