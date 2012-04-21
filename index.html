@@ -28,8 +28,12 @@
 <script src='webgl-utils.js'></script>
 <script src='game.js'></script>
 <style>
-  body { background: #000; margin: 0; padding: 0; }
+  body { background: #000; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+  #credits { text-align: center; color: #aaa; }
+  #credits a { color: #777; text-decoration: underline; }
+  #credits a:hover { color: #aaa; text-decoration: underline; }
 </style>
 <body onload='GAME_Init ();'>
   <canvas id='game-canvas' width=800 height=600 style='width: 800px; height: 600px; border: 2px solid #555; display: block; margin: 20px auto'></canvas>
+  <div id='credits'>Untitled Game<br>&copy; 2012 <a href='mailto:morten.hustveit@gmail.com'>Morten Hustveit</a> of <a href='http://bitraf.no/'>Bitraf</a></div>
 </body>

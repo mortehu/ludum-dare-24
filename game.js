@@ -1,4 +1,19 @@
-var gl;
+/*  Untitled Game
+    Copyright (C) 2012  Morten Hustveit
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /***********************************************************************/
 
@@ -178,8 +193,7 @@ function DRAW_AddQuad (texture, x, y, width, height)
 
 /***********************************************************************/
 
-var keys = {};
-var lastTime = 0;
+var SYS_keys = {};
 
 function SYS_Init ()
 {
@@ -189,8 +203,8 @@ function SYS_Init ()
     return;
 
 
-  document.onkeydown = function (event) { keys[String.fromCharCode (event.keyCode)] = true; };
-  document.onkeyup = function (event) { keys[String.fromCharCode (event.keyCode)] = false; };
+  document.onkeydown = function (event) { SYS_keys[String.fromCharCode (event.keyCode)] = true; };
+  document.onkeyup = function (event) { SYS_keys[String.fromCharCode (event.keyCode)] = false; };
 
   gl.viewportWidth = canvas.width;
   gl.viewportHeight = canvas.height;
@@ -208,13 +222,14 @@ function SYS_Init ()
 
 /***********************************************************************/
 
+var lastTime = 0;
 var x = 0, y = 0;
-var earth;
 var elapsed = 0;
+var placeholder;
 
 function GAME_SetupTextures ()
 {
-  earth = DRAW_LoadTexture ("placeholder.png");
+  placeholder = DRAW_LoadTexture ("placeholder.png");
 }
 
 function GAME_Init ()
@@ -241,12 +256,12 @@ function GAME_Update ()
 
   gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  if (keys['W']) y -= deltaTime * 10.0;
-  if (keys['A']) x -= deltaTime * 10.0;
-  if (keys['S']) y += deltaTime * 10.0;
-  if (keys['D']) x += deltaTime * 10.0;
+  if (SYS_keys['W']) y -= deltaTime * 10.0;
+  if (SYS_keys['A']) x -= deltaTime * 10.0;
+  if (SYS_keys['S']) y += deltaTime * 10.0;
+  if (SYS_keys['D']) x += deltaTime * 10.0;
 
-  DRAW_AddQuad (earth, x, y, 128.0, 128.0);
+  DRAW_AddQuad (placeholder, x, y, 128.0, 128.0);
   DRAW_Flush ();
 
   elapsed += deltaTime;
