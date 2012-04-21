@@ -11,17 +11,17 @@
   }
 </script>
 <script id='shader-vs' type='x-shader/x-vertex'>
-  attribute vec3 attr_VertexPosition;
+  attribute vec4 attr_VertexPosition;
   attribute vec2 attr_TextureCoord;
 
-  uniform vec2 uniform_WindowSize;
+  uniform vec4 uniform_Camera;
 
   varying vec2 var_TextureCoord;
 
   void main (void)
   {
-    gl_Position = vec4(-1.0 + (attr_VertexPosition.x * uniform_WindowSize.x) * 2.0,
-                        1.0 - (attr_VertexPosition.y * uniform_WindowSize.y) * 2.0, 0.0, 1.0);
+    gl_Position = vec4(-1.0 + ((attr_VertexPosition.x - uniform_Camera.z) * uniform_Camera.x) * 2.0,
+                        1.0 - ((attr_VertexPosition.y - uniform_Camera.w) * uniform_Camera.y) * 2.0, 0.0, 1.0);
     var_TextureCoord = attr_TextureCoord;
   }
 </script>
