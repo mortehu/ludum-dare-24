@@ -5,10 +5,9 @@ var gl;
 var DRAW_vertices = new Array ();
 var DRAW_textureCoords = new Array ();
 var DRAW_currentTexture;
-var DRAW_cameraX = -400.0, DRAW_cameraY = -300.0;
-var DRAW_cameraVelX = 0, DRAW_cameraVelY = 0;
-var DRAW_cameraNoiseX = 0.0, DRAW_cameraNoiseY = 0.0;
+var DRAW_camera;
 var DRAW_alpha = 1.0;
+var DRAW_blendMode = 0;
 
 function DRAW_SetupShaders ()
 {
@@ -36,6 +35,16 @@ function DRAW_SetupShaders ()
   gl.enableVertexAttribArray (shaderProgram.textureCoordAttribute);
 
   gl.uniform1i (gl.getUniformLocation (shaderProgram, "uniform_Sampler"), 0);
+}
+
+function DRAW_SetBlendMode (mode)
+{
+  if (mode == DRAW_blendMode)
+    return;
+
+  DRAW_Flush ();
+
+  DRAW_blendMode = mode;
 }
 
 function DRAW_GetShaderFromElement (id)
@@ -116,6 +125,12 @@ function DRAW_Flush ()
 
   gl.bindTexture (gl.TEXTURE_2D, DRAW_currentTexture);
 
+  switch (DRAW_blendMode)
+    {
+    case 0: gl.blendFunc (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); break;
+    case 1: gl.blendFunc (gl.SRC_ALPHA, gl.ONE); break;
+    }
+
   vertexPositionBuffer = gl.createBuffer ();
   gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
   gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_vertices), gl.STATIC_DRAW);
@@ -176,22 +191,22 @@ function DRAW_AddQuad (texture, x, y, width, height)
   DRAW_vertices.push (DRAW_alpha);
 
   DRAW_textureCoords.push (0.0);
-  DRAW_textureCoords.push (0.0);
-
-  DRAW_textureCoords.push (0.0);
-  DRAW_textureCoords.push (1.0);
-
-  DRAW_textureCoords.push (1.0);
   DRAW_textureCoords.push (1.0);
 
   DRAW_textureCoords.push (0.0);
   DRAW_textureCoords.push (0.0);
 
   DRAW_textureCoords.push (1.0);
+  DRAW_textureCoords.push (0.0);
+
+  DRAW_textureCoords.push (0.0);
   DRAW_textureCoords.push (1.0);
 
   DRAW_textureCoords.push (1.0);
   DRAW_textureCoords.push (0.0);
+
+  DRAW_textureCoords.push (1.0);
+  DRAW_textureCoords.push (1.0);
 }
 
 function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
@@ -326,50 +341,52 @@ function DRAW_AddCircle (texture, x, y, radius)
   c0 = 1.0;
 
   for (i = 0; i < 200; ++i)
-  {
-    var s1, c1;
-
-    if (i < 199)
     {
-      s1 = Math.sin((i + 1) * Math.PI / 100.0);
-      c1 = Math.cos((i + 1) * Math.PI / 100.0);
+      var s1, c1;
+
+      if (i < 199)
+        {
+          s1 = Math.sin((i + 1) * Math.PI / 100.0);
+          c1 = Math.cos((i + 1) * Math.PI / 100.0);
+        }
+      else
+        {
+          s1 = 0.0;
+          c1 = 1.0;
+        }
+
+      DRAW_vertices.push (s0 * radius + x);
+      DRAW_vertices.push (c0 * radius + y);
+      DRAW_vertices.push (DRAW_alpha);
+
+      DRAW_vertices.push (s1 * radius + x);
+      DRAW_vertices.push (c1 * radius + y);
+      DRAW_vertices.push (DRAW_alpha);
+
+      DRAW_vertices.push (x);
+      DRAW_vertices.push (y);
+      DRAW_vertices.push (DRAW_alpha);
+
+      DRAW_textureCoords.push (0.5 + 0.5 * s0);
+      DRAW_textureCoords.push (0.5 - 0.5 * c0);
+
+      DRAW_textureCoords.push (0.5 + 0.5 * s1);
+      DRAW_textureCoords.push (0.5 - 0.5 * c1);
+
+      DRAW_textureCoords.push (0.5);
+      DRAW_textureCoords.push (0.5);
+
+      s0 = s1;
+      c0 = c1;
     }
-    else
-    {
-      s1 = 0.0;
-      c1 = 1.0;
-    }
-
-    DRAW_vertices.push (s0 * radius + x);
-    DRAW_vertices.push (c0 * radius + y);
-    DRAW_vertices.push (DRAW_alpha);
-
-    DRAW_vertices.push (s1 * radius + x);
-    DRAW_vertices.push (c1 * radius + y);
-    DRAW_vertices.push (DRAW_alpha);
-
-    DRAW_vertices.push (x);
-    DRAW_vertices.push (y);
-    DRAW_vertices.push (DRAW_alpha);
-
-    DRAW_textureCoords.push (0.5 + 0.5 * s0);
-    DRAW_textureCoords.push (0.5 - 0.5 * c0);
-
-    DRAW_textureCoords.push (0.5 + 0.5 * s1);
-    DRAW_textureCoords.push (0.5 - 0.5 * c1);
-
-    DRAW_textureCoords.push (0.5);
-    DRAW_textureCoords.push (0.5);
-
-    s0 = s1;
-    c0 = c1;
-  }
 }
 
 /***********************************************************************/
 
 var keys = {};
 var lastTime = 0;
+
+var SYS_mouseX = 0, SYS_mouseY = 0;
 
 function SYS_Init ()
 {
@@ -378,8 +395,10 @@ function SYS_Init ()
   if (!(gl = WebGLUtils.setupWebGL (canvas)))
     return;
 
-  document.onkeydown = function () { GAME_KeyPressed(event); };
-  document.onkeyup = function () { GAME_KeyRelease(event); };
+  document.onkeydown = function (event) { GAME_KeyPressed (event); };
+  document.onkeyup = function (event) { GAME_KeyRelease (event); };
+  document.getElementById('game-canvas').onmousemove = function (event) { GAME_MouseMoved (event, this); }
+  document.getElementById('game-canvas').onmousedown = function (event) { GAME_ButtonPressed (event); }
 
   gl.viewportWidth = canvas.width;
   gl.viewportHeight = canvas.height;
@@ -393,24 +412,40 @@ function SYS_Init ()
 
   gl.enable (gl.BLEND);
   gl.disable (gl.CULL_FACE);
-  gl.blendFunc (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 }
 
 /***********************************************************************/
 
+var baddies = [];
+var bombs = [];
 var planets = [];
-var lasers = [];
+var particles = [];
 var elapsed = 0;
-var gravity = 50.0;
+var gravity = 500.0 / 128.0;
 var hasDoubleJump = true;
+var laserAge = 1.0;
 
-var earth;
+var teleportFromX, teleportFromY;
+var teleportToX, teleportToY;
+var teleportAge = 1.0;
+
+var GFX_planets = [];
 var planetSelector;
-var avatar;
+var GFX_black;
+var GFX_avatar, GFX_arm;
+var GFX_atmosphere;
+var GFX_baddie;
+var GFX_bomb;
+var GFX_avatarWalk = [];
 var stars0, stars1;
 var GFX_laser;
+var GFX_teleport;
+var GFX_coin;
+var GFX_particle0;
 
-var avatarAngle = 0, avatarAltitude = 0, yVel = 0, avatarFlipped = true;
+var avatarAngle = 0, avatarAltitude = 0, yVel = 0, xVel = 0, avatarFlipped = true;
+var avatarWalkDistance = 0.0;
+var avatarHealth = 500.0;
 var homePlanet = 0;
 
 function GAME_NewPlanet (x, y, radius)
@@ -420,8 +455,54 @@ function GAME_NewPlanet (x, y, radius)
   newPlanet.x = x;
   newPlanet.y = y;
   newPlanet.radius = radius;
+  newPlanet.coins = [];
+  newPlanet.sprite = GFX_planets [Math.floor (Math.random () * GFX_planets.length) % GFX_planets.length];
 
-  planets.push(newPlanet);
+  for (var i = 0; i < 10; ++i)
+    {
+      var coin;
+
+      coin = new Object;
+      coin.angle = i * Math.PI * 2 / 10.0;
+      if (Math.random () < 0.50)
+        coin.altitude = 18;
+      else
+        coin.altitude = 50;
+
+      newPlanet.coins.push (coin);
+    }
+
+  planets.push (newPlanet);
+}
+
+function GAME_NewBaddie (x, y)
+{
+  var baddie;
+
+  baddie = new Object;
+  baddie.x = x;
+  baddie.y = y;
+  baddie.velX = 0;
+  baddie.velY = 0;
+  baddie.angle = 0;
+  baddie.collisionAvoidance = -1;
+  baddie.health = 1.0;
+  baddies.push (baddie);
+}
+
+function GAME_NewBomb (x, y, velX, velY)
+{
+  var bomb, avatarPosition, magnitude;
+
+  avatarPosition = GAME_AvatarPosition ();
+
+  bomb = new Object;
+  bomb.x = x;
+  bomb.y = y;
+  bomb.velX = velX;
+  bomb.velY = velY;
+
+  bombs.push (bomb);
 }
 
 function GAME_NearestPlanet ()
@@ -450,20 +531,20 @@ function GAME_NearestPlanet ()
     angle = Math.atan2(planet.x - homeX, -(planet.y - homeY));
 
     if (Math.abs (angle - avatarAngle) > Math.PI)
-    {
-      if (angle > avatarAngle)
-        angle -= 2 * Math.PI;
-      else
-        angle += 2 * Math.PI;
-    }
+      {
+        if (angle > avatarAngle)
+          angle -= 2 * Math.PI;
+        else
+          angle += 2 * Math.PI;
+      }
 
     angle = Math.abs (angle - avatarAngle);
 
     if (angle < 0.3 && angle < minAngle)
-    {
-      minAngle = angle;
-      result = i;
-    }
+      {
+        minAngle = angle;
+        result = i;
+      }
   }
 
   return result;
@@ -472,40 +553,103 @@ function GAME_NearestPlanet ()
 function GAME_SetupTextures ()
 {
   GFX_laser = DRAW_LoadTexture ("gfx/laser.png");
+  GFX_teleport = DRAW_LoadTexture ("gfx/teleport.png");
+  GFX_coin = DRAW_LoadTexture ("gfx/coin.png");
+  GFX_particle0 = DRAW_LoadTexture ("gfx/particle0.png");
   stars0 = DRAW_LoadTexture ("gfx/stars0.png");
   stars1 = DRAW_LoadTexture ("gfx/stars1.png");
-  avatar = DRAW_LoadTexture ("gfx/avatar.png");
-  earth = DRAW_LoadTexture ("gfx/planet0.png");
+  GFX_baddie = DRAW_LoadTexture ("gfx/baddie.png");
+  GFX_bomb = DRAW_LoadTexture ("gfx/bomb.png");
+  GFX_black = DRAW_LoadTexture ("gfx/black.png");
+  GFX_avatar = DRAW_LoadTexture ("gfx/avatar.png");
+  GFX_arm = DRAW_LoadTexture ("gfx/arm.png");
+  GFX_avatarWalk.push (DRAW_LoadTexture ("gfx/avatar0.png"));
+  GFX_avatarWalk.push (GFX_avatar);
+  GFX_avatarWalk.push (DRAW_LoadTexture ("gfx/avatar4.png"));
+  GFX_avatarWalk.push (GFX_avatar);
+  GFX_planets.push(DRAW_LoadTexture ("gfx/planet0.png"));
+  GFX_planets.push(DRAW_LoadTexture ("gfx/planet1.png"));
+  GFX_planets.push(DRAW_LoadTexture ("gfx/planet2.png"));
   planetSelector = DRAW_LoadTexture ("gfx/planet-selector.png");
+  GFX_atmosphere = DRAW_LoadTexture ("gfx/atmosphere.png");
+}
+
+function GAME_GenPlanet ()
+{
+  var r, i, j, x, y, angle, iters;
+
+  for (iters = 0; iters < 1000; ++iters)
+    {
+      r = Math.random ();
+      r = Math.pow (r, 1.5); /* Cluster planets around the first planet */
+
+      i = Math.floor (r * (planets.length + 1)) % planets.length;
+
+      angle = Math.random () * Math.PI * 2;
+      x = planets[i].x + Math.cos (angle) * 543.058007951;
+      y = planets[i].y + Math.sin (angle) * 543.058007951;
+
+      for (j = 0; j < planets.length; ++j)
+        {
+          var deltaX, deltaY;
+
+          if (j == i)
+            continue;
+
+          deltaX = x - planets[j].x;
+          deltaY = y - planets[j].y;
+
+          if (deltaX * deltaX + deltaY * deltaY < 540 * 640)
+            break;
+        }
+
+      if (j == planets.length)
+        break;
+    }
+
+  if (iters == 1000)
+    return;
+
+  GAME_NewPlanet (x, y, 64 + Math.random() * 128);
 }
 
 function GAME_Init ()
 {
+  var i;
+
   SYS_Init ();
+
+  DRAW_camera = new Object;
+  DRAW_camera.x = -400.0;
+  DRAW_camera.y = -300.0;
+  DRAW_camera.velX = 0;
+  DRAW_camera.velY = 0;
 
   GAME_SetupTextures ();
 
-  GAME_NewPlanet (   0,    0, 128);
-  GAME_NewPlanet ( 384,  384, 128);
-  GAME_NewPlanet (-384,  384, 128);
-  GAME_NewPlanet (-384, -384, 128);
-  GAME_NewPlanet ( 384, -384, 128);
+  GAME_NewPlanet (0, 0, 128);
+
+  for (i = 0; i < 16; ++i)
+    GAME_GenPlanet ();
+
+  setTimeout("GAME_BaddiesSpawn()", 1000);
+  setTimeout("GAME_BombsSpawn()", 1000);
 
   GAME_Update ();
 }
 
-function GAME_DrawSky ()
+function GAME_SkyDraw ()
 {
   var s0x, s0y, s1x, s1y;
 
-  s0x = DRAW_cameraX * 0.0001;
-  s0y = DRAW_cameraY * 0.0001;
-  s1x = DRAW_cameraX * 0.00005;
-  s1y = DRAW_cameraY * 0.00005;
+  s0x = DRAW_camera.x * 0.0002;
+  s0y = DRAW_camera.y * 0.0002;
+  s1x = DRAW_camera.x * 0.000075;
+  s1y = DRAW_camera.y * 0.000075;
 
-  DRAW_AddQuadST (stars0, DRAW_cameraX, DRAW_cameraY, gl.viewportWidth, gl.viewportHeight,
+  DRAW_AddQuadST (stars0, DRAW_camera.x, DRAW_camera.y, gl.viewportWidth, gl.viewportHeight,
                   s0x, s0y, s0x + 1.0, s0y + gl.viewportHeight / gl.viewportWidth);
-  DRAW_AddQuadST (stars1, DRAW_cameraX, DRAW_cameraY, gl.viewportWidth, gl.viewportHeight,
+  DRAW_AddQuadST (stars1, DRAW_camera.x, DRAW_camera.y, gl.viewportWidth, gl.viewportHeight,
                   s1x, s1y, s1x + 1.0, s1y + gl.viewportHeight / gl.viewportWidth);
 }
 
@@ -516,7 +660,7 @@ function GAME_AvatarPosition ()
 
   planet = planets[homePlanet];
 
-  y = avatarAltitude + planet.radius + 16;
+  y = avatarAltitude + planet.radius + 20;
 
   result.x = planet.x + Math.cos(avatarAngle - Math.PI * 0.5) * y;
   result.y = planet.y + Math.sin(avatarAngle - Math.PI * 0.5) * y;
@@ -524,15 +668,35 @@ function GAME_AvatarPosition ()
   return result;
 }
 
-function GAME_DrawAvatar (x, y, flipped)
+function GAME_AvatarDraw ()
 {
   var planet;
+  var x, y, deltaX, deltaY, armX, armY;
+  var sprite;
+  var c, s;
 
   planet = planets[homePlanet];
 
-  y += planet.radius;
+  y = avatarAltitude + planet.radius;
 
-  DRAW_AddQuadAngle (avatar, planet.x + Math.cos(x - Math.PI * 0.5) * y, planet.y + Math.sin(x - Math.PI * 0.5) * y, 32, 32, x, flipped);
+  if (avatarAltitude)
+    sprite = GFX_avatarWalk[0];
+  else if (xVel)
+    sprite = GFX_avatarWalk[Math.floor (avatarWalkDistance * 0.04 % 4)];
+  else
+    sprite = GFX_avatar;
+
+  c = Math.cos(avatarAngle - Math.PI * 0.5);
+  s = Math.sin(avatarAngle - Math.PI * 0.5);
+
+  armX = planet.x + c * (y + 20);
+  armY = planet.y + s * (y + 20);
+
+  deltaX = SYS_mouseX + DRAW_camera.x - armX;
+  deltaY = SYS_mouseY + DRAW_camera.y - armY;
+
+  DRAW_AddQuadAngle (GFX_arm, armX, armY, 4, 8, Math.atan2 (deltaX, -deltaY));
+  DRAW_AddQuadAngle (sprite, planet.x + c * y, planet.y + s * y, 32, 32, avatarAngle, avatarFlipped);
 }
 
 function GAME_KeyPressed(e)
@@ -548,87 +712,213 @@ function GAME_KeyPressed(e)
 
   switch (String.fromCharCode (e.keyCode))
     {
-    case ' ':
-
-      if (avatarAltitude == 0)
-        yVel = gravity * 1.5;
-      else if (hasDoubleJump && yVel < 0)
-      {
-        yVel = gravity * 0.8;
-        hasDoubleJump = false;
-      }
-
-      break;
-
-    case 'T':
+    case 'W':
 
       if (homePlanet != (nextPlanet = GAME_NearestPlanet ()))
         {
           var deltaX, deltaY;
+          var avatarPosition;
+
+          avatarPosition = GAME_AvatarPosition ();
+          teleportFromX = avatarPosition.x;
+          teleportFromY = avatarPosition.y;
 
           deltaX = planets[nextPlanet].x - planets[homePlanet].x;
           deltaY = planets[nextPlanet].y - planets[homePlanet].y;
 
           homePlanet = nextPlanet;
           avatarAngle = Math.atan2(-deltaX, deltaY);
+          avatarFlipped = !avatarFlipped;
+
+          avatarPosition = GAME_AvatarPosition ();
+          teleportToX = avatarPosition.x;
+          teleportToY = avatarPosition.y;
+          teleportAge = 0.0;
         }
 
       break;
 
-    case 'F':
+    case ' ':
 
-      avatarPosition = GAME_AvatarPosition ();
-      laser = new Object();
-      laser.age = 0.0;
-      laser.fromX = avatarPosition.x;
-      laser.fromY = avatarPosition.y;
-
-      if (avatarFlipped)
+      if (avatarAltitude == 0)
+        yVel = 200;
+      else if (hasDoubleJump && yVel < 120)
         {
-          laser.toX = laser.fromX + Math.cos (avatarAngle) * 1000.0;
-          laser.toY = laser.fromY - Math.sin (avatarAngle) * 1000.0;
+          yVel = 120;
+          hasDoubleJump = false;
         }
-      else
-        {
-          laser.toX = laser.fromX - Math.cos (avatarAngle) * 1000.0;
-          laser.toY = laser.fromY + Math.sin (avatarAngle) * 1000.0;
-        }
-
-      lasers.push(laser);
 
       break;
     }
 }
 
-function GAME_KeyRelease(e)
+function GAME_KeyRelease (e)
 {
   keys[String.fromCharCode (e.keyCode)] = false;
 }
 
-/* Move camera towards target, constrained by maximum acceleration and velocity */
-function GAME_CameraUpdate (deltaTime)
+function GAME_MouseMoved (ev, el)
 {
-  var targetX, targetY, distance;
+  SYS_mouseX = ev.pageX - el.offsetLeft;
+  SYS_mouseY = ev.pageY - el.offsetTop;
+}
+
+function GAME_ButtonPressed (ev)
+{
+  if (laserAge > 0.15)
+    laserAge = 0.0;
+}
+
+function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
+{
+  var i;
+  var distance = 1000.0;
+  var magnitude;
+
+  magnitude = Math.sqrt(dirX * dirX + dirY * dirY);
+  dirX /= magnitude;
+  dirY /= magnitude;
+
+  for (i = 0; i < planets.length; ++i)
+    {
+      var planet;
+      var a, b, c, d, discr;
+      var deltaX, deltaY;
+      var dist;
+
+      planet = planets[i];
+
+      deltaX = fromX - planet.x;
+      deltaY = fromY - planet.y;
+
+      b = 2 * (deltaX * dirX + deltaY * dirY);
+      c = deltaX * deltaX + deltaY * deltaY - planet.radius * planet.radius;
+
+      discr = b * b - 4 * c;
+
+      if (discr < 0)
+        continue;
+
+      discr = Math.sqrt (discr);
+
+      dist = (-b - discr) * 0.5;
+
+      if (dist < 0)
+        {
+          dist = (-b + discr) * 0.5;
+
+          if (dist < 0)
+            continue;
+        }
+
+      if (dist < distance)
+        distance = dist;
+    }
+
+  for (i = 0; i < baddies.length; )
+    {
+      var baddie;
+      var a, b, c, d, discr;
+      var deltaX, deltaY;
+      var dist;
+
+      baddie = baddies[i];
+
+      deltaX = fromX - baddie.x;
+      deltaY = fromY - baddie.y;
+
+      b = 2 * (deltaX * dirX + deltaY * dirY);
+      c = deltaX * deltaX + deltaY * deltaY - 16 * 16;
+
+      discr = b * b - 4 * c;
+
+      if (discr < 0)
+        {
+          ++i;
+
+          continue;
+        }
+
+      discr = Math.sqrt (discr);
+
+      dist = (-b - discr) * 0.5;
+
+      if (dist < 0)
+        {
+          dist = (-b + discr) * 0.5;
+
+          if (dist < 0)
+            {
+              ++i;
+
+              continue;
+            }
+        }
+
+      if (dist < distance)
+        {
+          distance = dist;
+
+          baddie.health -= (avatarAltitude ? 5 : 1) * deltaTime;
+          baddie.velX += dirX * deltaTime * 1000;
+          baddie.velY += dirY * deltaTime * 1000;
+
+          if (baddie.health < 0)
+            {
+              for (var j = 0; j < 40; ++j)
+                {
+                  particle = new Object;
+                  particle.x = baddie.x;
+                  particle.y = baddie.y;
+                  particle.velX = (Math.random() - 0.5) * 32;
+                  particle.velY = (Math.random() - 0.5) * 32;
+                  particle.age = 0;
+                  particles.push (particle);
+                }
+
+              baddies.splice (i, 1);
+
+              continue;
+            }
+        }
+
+      ++i;
+    }
+
+  return distance;
+}
+
+function GAME_AngleDistance (a, b)
+{
+  if (a < 0) a += 2 * Math.pi;
+  if (b < 0) b += 2 * Math.pi;
+
+  if (Math.abs (a - b) < Math.PI)
+    return Math.abs (a - b);
+
+  if (a > b)
+    return Math.abs (b - (a - 2 * Math.PI));
+
+  return Math.abs (a - (b - 2 * Math.PI));
+}
+
+function GAME_Cruise (position, target, maxAcceleration, maxVelocity, deltaTime)
+{
+  var distance;
   var dirX, dirY;
   var velocity;
   var targetVelocityX, targetVelocityY, targetVelocity;
   var deltaVelocityX, deltaVelocityY, deltaVelocity;
 
-  var maxAcceleration = 200.0;
-  var maxVelocity = 500.0;
-
-  targetX = planets[homePlanet].x - gl.viewportWidth * 0.5;
-  targetY = planets[homePlanet].y - gl.viewportHeight * 0.5;
-
-  dirX = targetX - DRAW_cameraX;
-  dirY = targetY - DRAW_cameraY;
+  dirX = target.x - position.x;
+  dirY = target.y - position.y;
   distance = Math.sqrt (dirX * dirX + dirY * dirY);
 
-  if (!distance)
-    return;
-
-  dirX /= distance;
-  dirY /= distance;
+  if (distance)
+    {
+      dirX /= distance;
+      dirY /= distance;
+    }
 
   targetVelocity = Math.sqrt (distance / maxAcceleration) * maxAcceleration;
 
@@ -638,116 +928,472 @@ function GAME_CameraUpdate (deltaTime)
   if (targetVelocity * deltaTime > distance)
     targetVelocity = distance / deltaTime;
 
-  velocity = Math.sqrt (DRAW_cameraVelX * DRAW_cameraVelX + DRAW_cameraVelY * DRAW_cameraVelY);
+  velocity = Math.sqrt (position.velX * position.velX + position.velY * position.velY);
 
   targetVelocityX = dirX * targetVelocity;
   targetVelocityY = dirY * targetVelocity;
 
-  deltaVelocityX = targetVelocityX - DRAW_cameraVelX;
-  deltaVelocityY = targetVelocityY - DRAW_cameraVelY;
+  deltaVelocityX = targetVelocityX - position.velX;
+  deltaVelocityY = targetVelocityY - position.velY;
 
   deltaVelocity = Math.sqrt (deltaVelocityX * deltaVelocityX + deltaVelocityY * deltaVelocityY);
 
   /* Can we reach the target velocity in less than `deltaTime' seconds? */
   if (deltaVelocity < maxAcceleration * deltaTime)
     {
-      DRAW_cameraVelX = targetVelocityX;
-      DRAW_cameraVelY = targetVelocityY;
+      position.velX = targetVelocityX;
+      position.velY = targetVelocityY;
     }
   else
     {
       /* Apply maximum acceleration in the direction of the target/current velocity delta */
-      DRAW_cameraVelX += (deltaVelocityX / deltaVelocity) * maxAcceleration * deltaTime;
-      DRAW_cameraVelY += (deltaVelocityY / deltaVelocity) * maxAcceleration * deltaTime;
+      position.velX += (deltaVelocityX / deltaVelocity) * maxAcceleration * deltaTime;
+      position.velY += (deltaVelocityY / deltaVelocity) * maxAcceleration * deltaTime;
     }
 
-  DRAW_cameraX += DRAW_cameraVelX * deltaTime;
-  DRAW_cameraY += DRAW_cameraVelY * deltaTime;
+  position.x += position.velX * deltaTime;
+  position.y += position.velY * deltaTime;
 }
 
-function GAME_Draw ()
+/* Move camera towards target, constrained by maximum acceleration and velocity */
+function GAME_CameraUpdate (deltaTime)
+{
+  var target;
+
+  var avatarPosition = GAME_AvatarPosition ();
+  target = new Object;
+  target.x = avatarPosition.x - gl.viewportWidth * 0.5;
+  target.y = avatarPosition.y - gl.viewportHeight * 0.5;
+
+  GAME_Cruise (DRAW_camera, target, 1000.0, 1500.0, deltaTime);
+}
+
+function GAME_PlanetsDraw ()
 {
   var nearestPlanet;
 
-  gl.uniform4f (gl.getUniformLocation (shaderProgram, "uniform_Camera"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight, DRAW_cameraX, DRAW_cameraY);
-
-  GAME_DrawSky ();
+  avatarPosition = GAME_AvatarPosition ();
 
   nearestPlanet = GAME_NearestPlanet ();
-
-  for (var i = 0; i < lasers.length; ++i)
-    {
-      var laser = lasers[i];
-      var length;
-
-      length = Math.sqrt ((laser.toX - laser.fromX) * (laser.toX - laser.fromX) + (laser.toY - laser.fromY) * (laser.toY - laser.fromY));
-
-      DRAW_SetAlpha (1.0 - laser.age * 2.0);
-      DRAW_AddQuadAngle (GFX_laser, laser.fromX, laser.fromY, 4.0, length, Math.atan2 (laser.toX - laser.fromX, laser.toY - laser.fromY));
-    }
-
-  DRAW_SetAlpha (1.0);
 
   for (var i = 0; i < planets.length; ++i)
     {
       var planet = planets[i];
+      var coins = planet.coins;
 
-      DRAW_AddCircle (earth, planet.x, planet.y, 128.0);
+      DRAW_SetBlendMode (1);
+      DRAW_AddQuad (GFX_atmosphere, planet.x - planet.radius - 10, planet.y - planet.radius - 10, 2 * planet.radius + 20, 2 * planet.radius + 20);
+
+      DRAW_SetBlendMode (0);
+      DRAW_AddCircle (planet.sprite, planet.x, planet.y, planet.radius);
 
       if (i == nearestPlanet && nearestPlanet != homePlanet)
+        DRAW_AddQuad (planetSelector, planet.x - planet.radius - 10, planet.y - planet.radius - 10, 2 * planet.radius + 20, 2 * planet.radius + 20);
+
+      for (var j = 0; j < coins.length; )
         {
-          DRAW_AddQuad (planetSelector, planet.x - planet.radius - 10, planet.y - planet.radius - 10, 2 * planet.radius + 20, 2 * planet.radius + 20);
+          var coin = coins[j];
+          var x, y;
+          var deltaX, deltaY;
+
+          x = planet.x + Math.cos (coin.angle) * (planet.radius + coin.altitude) - 8;
+          y = planet.y + Math.sin (coin.angle) * (planet.radius + coin.altitude) - 8;
+
+          deltaX = avatarPosition.x - x;
+          deltaY = avatarPosition.y - y;
+
+          if (deltaX * deltaX + deltaY * deltaY < 22 * 22)
+            {
+              avatarHealth += 50;
+              coins.splice (j, 1);
+
+              continue;
+            }
+          else
+            ++j;
+
+          DRAW_AddQuad (GFX_coin, x, y, 16, 16);
         }
     }
+}
 
-  GAME_DrawAvatar (avatarAngle, avatarAltitude, avatarFlipped);
+function GAME_Draw (deltaTime)
+{
+  gl.uniform4f (gl.getUniformLocation (shaderProgram, "uniform_Camera"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight, DRAW_camera.x, DRAW_camera.y);
+
+  DRAW_SetAlpha (1.0);
+
+  GAME_SkyDraw ();
+
+  DRAW_SetBlendMode (1);
+  DRAW_SetAlpha (1.0);
+
+  if (laserAge < 0.15)
+    {
+      var angle;
+      var toX, toY;
+      var distance;
+
+      avatarPosition = GAME_AvatarPosition ();
+
+      toX = SYS_mouseX + DRAW_camera.x;
+      toY = SYS_mouseY + DRAW_camera.y;
+      angle = Math.atan2 (toX - avatarPosition.x, -(toY - avatarPosition.y));
+
+      /* XXX: Game code in the draw code */
+      if (1000 > (distance = GAME_RayCollide (avatarPosition.x, avatarPosition.y, toX - avatarPosition.x, toY - avatarPosition.y, deltaTime)))
+        {
+          var deltaX, deltaY;
+          var magScale;
+          var particle;
+
+          deltaX = toX - avatarPosition.x;
+          deltaY = toY - avatarPosition.y;
+          magScale = 1.0 / Math.sqrt (deltaX * deltaX + deltaY * deltaY);
+          deltaX *= magScale;
+          deltaY *= magScale;
+
+          toX = avatarPosition.x + deltaX * distance;
+          toY = avatarPosition.y + deltaY * distance;
+
+          for (var j = 0; j < 10; ++j)
+            {
+              particle = new Object;
+              particle.x = toX;
+              particle.y = toY;
+              particle.velX = (Math.random() - 0.5) * 4;
+              particle.velY = (Math.random() - 0.5) * 4;
+              particle.age = 0;
+              particles.push (particle);
+            }
+        }
+
+      DRAW_SetAlpha (1.0 - laserAge / 0.15);
+      DRAW_AddQuadAngle (GFX_laser, avatarPosition.x, avatarPosition.y, 4.0, distance, angle);
+    }
+
+  if (teleportAge < 0.5)
+    {
+      var distance, angle;
+
+      distance = Math.sqrt ((teleportToX - teleportFromX) * (teleportToX - teleportFromX) + (teleportToY - teleportFromY) * (teleportToY - teleportFromY));
+      angle = Math.atan2 (teleportToX - teleportFromX, -(teleportToY - teleportFromY));
+
+      DRAW_SetAlpha (1.0 - teleportAge * 2.0);
+      DRAW_AddQuadAngle (GFX_teleport, teleportFromX, teleportFromY, 4.0, distance, angle);
+    }
+
+  DRAW_SetAlpha (1.0);
+  DRAW_SetBlendMode (0);
+
+  GAME_PlanetsDraw ();
+
+  GAME_AvatarDraw ();
+
+  for (var i = 0; i < bombs.length; ++i)
+    {
+      var bomb;
+
+      bomb = bombs[i];
+
+      DRAW_AddQuad (GFX_bomb, bomb.x - 2, bomb.y - 2, 4, 4);
+    }
+
+  for (var i = 0; i < baddies.length; ++i)
+    {
+      var baddie;
+
+      baddie = baddies[i];
+
+      DRAW_AddQuad (GFX_baddie, baddie.x - 16, baddie.y - 16, 32, 32);
+    }
+
+  DRAW_SetBlendMode (1);
+
+  for (var i = 0; i < particles.length; ++i)
+    {
+      var particle;
+      var scale;
+
+      particle = particles[i];
+      scale = 8 + particle.age * 4;
+
+      DRAW_SetAlpha (1.0 - particle.age);
+      DRAW_AddQuad (GFX_particle0, particle.x - scale, particle.y - scale, scale * 2, scale * 2);
+    }
+
+  if (avatarHealth < 500.0)
+    {
+      DRAW_SetBlendMode (0);
+
+      if (avatarHealth > 0.0)
+        DRAW_SetAlpha (1.0 - avatarHealth / 500.0);
+      else
+        DRAW_SetAlpha (1.0);
+
+      DRAW_AddQuad (GFX_black, DRAW_camera.x, DRAW_camera.y, gl.viewportWidth, gl.viewportHeight);
+    }
 
   DRAW_Flush ();
+}
+
+function GAME_BaddiesSpawn ()
+{
+  if (baddies.length < 2)
+    {
+      r = Math.random ();
+
+      if (r < 0.25)
+        GAME_NewBaddie (DRAW_camera.x + gl.viewportWidth * 0.5, DRAW_camera.y - 50);
+      else if (r < 0.50)
+        GAME_NewBaddie (DRAW_camera.x - 50,                     DRAW_camera.y + gl.viewportHeight * 0.5);
+      else if (r < 0.75)
+        GAME_NewBaddie (DRAW_camera.x + gl.viewportWidth + 50,  DRAW_camera.y + gl.viewportHeight * 0.5);
+      else
+        GAME_NewBaddie (DRAW_camera.x + gl.viewportWidth * 0.5, DRAW_camera.y + gl.viewportHeight + 50);
+    }
+
+  setTimeout("GAME_BaddiesSpawn()", 15000);
+}
+
+function GAME_BombsSpawn ()
+{
+  for (var i = 0; i < baddies.length; ++i)
+    {
+      GAME_NewBomb (baddies[i].x, baddies[i].y,
+                    baddies[i].velX * 0.5 + (Math.random () - 0.5) * 50,
+                    baddies[i].velY * 0.5 + (Math.random () - 0.5) * 50);
+    }
+
+  setTimeout("GAME_BombsSpawn()", 1000);
 }
 
 function GAME_Update ()
 {
   var timeNow, deltaTime;
+  var avatarPosition;
+  var friction;
+  var hPlanet;
 
   timeNow = new Date ().getTime ();
-  deltaTime = timeNow - lastTime;
+  deltaTime = (timeNow - lastTime) * 0.001;
+  lastTime = timeNow;
 
   if (deltaTime < 0 || deltaTime > 0.05)
     deltaTime = 0.05;
 
-  GAME_Draw ();
+  GAME_Draw (deltaTime);
 
-  for (var i = 0; i < lasers.length; )
+  laserAge += deltaTime;
+  teleportAge += deltaTime;
+
+  hPlanet = planets[homePlanet];
+
+  avatarPosition = GAME_AvatarPosition ();
+
+  for (var i = 0; i < baddies.length; )
     {
-      var laser = lasers[i];
+      var baddie;
+      var target, deltaX, deltaY, angle;
+      var magnitude;
 
-      laser.age += deltaTime;
+      baddie = baddies[i];
+      target = new Object;
 
-      if (laser.age > 0.5)
+      for (var j = 0; j < planets.length; ++j)
         {
-          lasers.splice(i, 1);
+          deltaX = baddie.x - planets[j].x;
+          deltaY = baddie.y - planets[j].y;
+
+          if (deltaX * deltaX + deltaY * deltaY < planets[j].radius * planets[j].radius + 16 * 16)
+            break;
         }
+
+      if (j != planets.length)
+        {
+          var r;
+
+          for (var j = 0; j < 40; ++j)
+            {
+              particle = new Object;
+              particle.x = baddie.x;
+              particle.y = baddie.y;
+              particle.velX = (Math.random() - 0.5) * 32;
+              particle.velY = (Math.random() - 0.5) * 32;
+              particle.age = 0;
+              particles.push (particle);
+            }
+
+          baddies.splice (i, 1);
+
+          continue;
+        }
+      else
+        ++i;
+
+      deltaX = baddie.x - hPlanet.x;
+      deltaY = baddie.y - hPlanet.y;
+      magnitude = Math.sqrt (deltaX * deltaX + deltaY * deltaY);
+
+      angle = Math.atan2 (deltaX, -deltaY);
+
+      if (magnitude < 200 || GAME_AngleDistance (angle, avatarAngle) > Math.PI * 0.5)
+        {
+          target.x = hPlanet.x + Math.sin (angle + 0.1) * 271;
+          target.y = hPlanet.y - Math.cos (angle + 0.1) * 271;
+        }
+      else
+        {
+          target.x = hPlanet.x + Math.sin (avatarAngle) * 271;
+          target.y = hPlanet.y - Math.cos (avatarAngle) * 271;
+        }
+
+      GAME_Cruise (baddie, target, 600.0, 600.0, deltaTime);
+    }
+
+  for (var i = 0; i < bombs.length; )
+    {
+      var bomb;
+      var deltaX, deltaY;
+      var magnitude;
+      var magScale;
+      var collide = false;
+
+      bomb = bombs[i];
+
+      deltaX = bomb.x - avatarPosition.x;
+      deltaY = bomb.y - avatarPosition.y;
+
+      if (deltaX * deltaX + deltaY * deltaY < 13 * 13)
+        {
+          avatarHealth *= 0.8;
+          collide = true;
+        }
+      else
+        {
+          for (var j = 0; j < planets.length; ++j)
+            {
+              var planet;
+
+              planet = planets[j];
+
+              deltaX = bomb.x - planet.x;
+              deltaY = bomb.y - planet.y;
+              magnitude = deltaX * deltaX + deltaY * deltaY;
+
+              if (magnitude < planet.radius * planet.radius)
+                {
+                  collide = true;
+
+                  break;
+                }
+            }
+        }
+
+      if (collide)
+        {
+          bombs.splice (i, 1);
+
+          for (var j = 0; j < 10; ++j)
+            {
+              particle = new Object;
+              particle.x = bomb.x;
+              particle.y = bomb.y;
+              particle.velX = (Math.random() - 0.5) * 4;
+              particle.velY = (Math.random() - 0.5) * 4;
+              particle.age = 0.5;
+              particles.push (particle);
+            }
+
+          continue;
+
+        }
+
+      ++i;
+
+      deltaX = avatarPosition.x - bomb.x;
+      deltaY = avatarPosition.y - bomb.y;
+      magScale = 1.0 / Math.sqrt (deltaX * deltaX + deltaY * deltaY);
+      deltaX *= magScale;
+      deltaY *= magScale;
+
+      bomb.velX += deltaTime * deltaX * 1000.0;
+      bomb.velY += deltaTime * deltaY * 1000.0;
+
+      magnitude = Math.sqrt (bomb.velX * bomb.velX + bomb.velY * bomb.velY);
+
+      if (magnitude > 500)
+        {
+          magScale = 500.0 / magnitude;
+          bomb.velX *= magScale;
+          bomb.velY *= magScale;
+        }
+
+      bomb.x += deltaTime * bomb.velX;
+      bomb.y += deltaTime * bomb.velY;
+    }
+
+  for (var i = 0; i < particles.length; )
+    {
+      var particle;
+
+      particle = particles[i];
+
+      particle.x += deltaTime * particle.velX;
+      particle.y += deltaTime * particle.velY;
+      particle.age += deltaTime;
+
+      if (particle.age > 1.0)
+          particles.splice (i, 1);
       else
         ++i;
     }
 
+  friction = avatarAltitude ? 0.3 : 1.0;
+
   if (keys['A'])
     {
-      avatarAngle -= deltaTime * 0.5;
+      xVel -= friction * deltaTime * 6.0;
+      if (xVel < -1.5)
+        xVel = -1.5;
+      avatarFlipped = false;
+    }
+  else if (keys['D'])
+    {
+      xVel += friction * deltaTime * 6.0;
+      if (xVel > 1.5)
+        xVel = 1.5;
+      avatarFlipped = true;
+    }
+  else if (xVel > 0)
+    {
+      xVel -= friction * deltaTime * 6.0;
+      if (xVel < 0.0)
+        xVel = 0.0;
+      avatarFlipped = true;
+    }
+  else if (xVel < 0)
+    {
+      xVel += friction * deltaTime * 6.0;
+      if (xVel < 0.0)
+        xVel = 0.0;
       avatarFlipped = false;
     }
 
-  if (keys['D'])
-    {
-      avatarAngle += deltaTime * 0.5;
-      avatarFlipped = true;
-    }
+  if (avatarAltitude || !xVel)
+    avatarWalkDistance = 0;
+
+  var walkAngle;
+  walkAngle = xVel * deltaTime / (hPlanet.radius / 128);
+
+  avatarWalkDistance += Math.abs (walkAngle) * 2 * hPlanet.radius;
+  avatarAngle += walkAngle;
 
   while (avatarAngle < 0.0)
     avatarAngle += 2 * Math.PI;
   avatarAngle %= 2 * Math.PI;
 
-  yVel -= deltaTime * gravity;
+  yVel -= deltaTime * gravity * hPlanet.radius;
   avatarAltitude += yVel * deltaTime;
 
   if (avatarAltitude < 0)
