@@ -276,7 +276,14 @@ function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
 
 function DRAW_Number (number, x, y)
 {
+  var result;
+
   DRAW_SetAlpha (1.0);
+
+  if (number)
+    x += Math.floor (Math.log(number) / Math.log(10)) * 11;
+
+  result = x + 11;
 
   do
     {
@@ -293,6 +300,8 @@ function DRAW_Number (number, x, y)
       number = Math.floor (number / 10);
     }
   while (number > 0);
+
+  return result;
 }
 
 /* Pivot: Bottom center */
@@ -474,6 +483,7 @@ var GFX_bomb;
 var GFX_coin;
 var GFX_font;
 var GFX_help;
+var GFX_howToRestart;
 var GFX_laser;
 var GFX_mine;
 var GFX_particle0;
@@ -482,12 +492,14 @@ var GFX_planets = [];
 var GFX_stars0, GFX_stars1;
 var GFX_teleport;
 var GFX_teleportMachine;
+var GFX_winner;
 
 var avatarAngle = 0, avatarAltitude = 0, yVel = 0, xVel = 0, avatarFlipped = true;
 var avatarWalkDistance = 0.0;
 var avatarHealth = 500.0;
 var coinsLeft = 0;
 var homePlanet = 0;
+var deathAlpha = 0.0;
 
 function GAME_NewPlanet (x, y, radius)
 {
@@ -638,6 +650,7 @@ function GAME_SetupTextures ()
   GFX_coin = DRAW_LoadTexture ("gfx/coin.png");
   GFX_font = DRAW_LoadTexture ("gfx/font.png");
   GFX_help = DRAW_LoadTexture ("gfx/help.png");
+  GFX_howToRestart = DRAW_LoadTexture ("gfx/how-to-restart.png");
   GFX_laser = DRAW_LoadTexture ("gfx/laser.png");
   GFX_mine = DRAW_LoadTexture ("gfx/mine.png");
   GFX_particle0 = DRAW_LoadTexture ("gfx/particle0.png");
@@ -649,6 +662,7 @@ function GAME_SetupTextures ()
   GFX_stars1 = DRAW_LoadTexture ("gfx/stars1.png");
   GFX_teleport = DRAW_LoadTexture ("gfx/teleport.png");
   GFX_teleportMachine = DRAW_LoadTexture ("gfx/teleport-machine.png");
+  GFX_winner = DRAW_LoadTexture ("gfx/winner.png");
 }
 
 function GAME_GenPlanet ()
@@ -690,11 +704,12 @@ function GAME_GenPlanet ()
   GAME_NewPlanet (x, y, 64 + Math.random() * 64);
 }
 
-function GAME_Init ()
+function GAME_Reset ()
 {
-  var i;
-
-  SYS_Init ();
+  baddies = [];
+  bombs = [];
+  planets = [];
+  particles = [];
 
   DRAW_camera = new Object;
   DRAW_camera.x = -400.0;
@@ -702,7 +717,15 @@ function GAME_Init ()
   DRAW_camera.velX = 0;
   DRAW_camera.velY = 0;
 
-  GAME_SetupTextures ();
+  avatarAngle = 0;
+  avatarAltitude = 0;
+  yVel = 0;
+  xVel = 0;
+  avatarFlipped = true;
+  avatarWalkDistance = 0.0;
+  avatarHealth = 500.0;
+  coinsLeft = 0;
+  homePlanet = 0;
 
   GAME_NewPlanet (0, 0, 128);
 
@@ -710,6 +733,17 @@ function GAME_Init ()
     GAME_GenPlanet ();
 
   GAME_FindTeleports ();
+}
+
+function GAME_Init ()
+{
+  var i;
+
+  SYS_Init ();
+
+  GAME_SetupTextures ();
+
+  GAME_Reset ();
 
   setTimeout("GAME_BaddiesSpawn()", 1000);
   setTimeout("GAME_BombsSpawn()", 1000);
@@ -818,6 +852,12 @@ function GAME_KeyPressed(e)
           teleportToY = avatarPosition.y;
           teleportAge = 0.0;
         }
+
+      break;
+
+    case 'R':
+
+      GAME_Reset ();
 
       break;
 
@@ -1233,7 +1273,7 @@ function GAME_Draw (deltaTime)
   DRAW_SetBlendMode (1);
   DRAW_SetAlpha (1.0);
 
-  if (laserAge < 0.15)
+  if (laserAge < 0.15 && !SYS_keys['H'] && (deathAlpha < 1.0) && coinsLeft)
     {
       var angle;
       var toX, toY;
@@ -1329,23 +1369,69 @@ function GAME_Draw (deltaTime)
 
   DRAW_SetBlendMode (0);
 
-  if (avatarHealth < 500.0)
+  if (avatarHealth < 500.0 || deathAlpha)
     {
-      if (avatarHealth > 0.0)
-        DRAW_SetAlpha (1.0 - avatarHealth / 500.0);
+      var targetAlpha;
+      
+      if (avatarHealth > 10)
+        targetAlpha = 1.0 - avatarHealth / 500.0;
       else
-        DRAW_SetAlpha (1.0);
+        targetAlpha = 1.0;
+
+      if (targetAlpha > deathAlpha)
+        {
+          deathAlpha += deltaTime;
+
+          if (deathAlpha > targetAlpha)
+            deathAlpha = targetAlpha;
+        }
+      else
+        {
+          deathAlpha -= deltaTime;
+
+          if (deathAlpha < targetAlpha)
+            deathAlpha = targetAlpha;
+        }
+
+      DRAW_SetAlpha (deathAlpha);
 
       DRAW_AddQuad (GFX_black, DRAW_camera.x, DRAW_camera.y, gl.viewportWidth, gl.viewportHeight);
     }
 
-  if (SYS_keys['H'])
-    {
-      DRAW_SetAlpha (1.0);
-      DRAW_AddQuad (GFX_help, DRAW_camera.x + gl.viewportWidth * 0.5 - gl.viewportHeight * 0.5, DRAW_camera.y, gl.viewportHeight, gl.viewportHeight);
-    }
+  DRAW_SetAlpha (1.0);
 
-  DRAW_Number (coinsLeft, DRAW_camera.x + 100, DRAW_camera.y + 100);
+  if (SYS_keys['H'])
+    DRAW_AddQuad (GFX_help, DRAW_camera.x + gl.viewportWidth * 0.5 - gl.viewportHeight * 0.5, DRAW_camera.y, gl.viewportHeight, gl.viewportHeight);
+
+  if (deathAlpha == 1.0)
+    {
+      var x, y;
+
+      x = DRAW_camera.x + gl.viewportWidth * 0.5 - 128;
+      y = DRAW_camera.y + gl.viewportHeight * 0.5 - 32;
+
+      DRAW_AddQuad (GFX_howToRestart, x - 128, y, 512, 64);
+    }
+  else if (coinsLeft > 0)
+    {
+      var coinX;
+
+      coinX = DRAW_Number (coinsLeft, DRAW_camera.x + 5, DRAW_camera.y + 5);
+      DRAW_AddQuad (GFX_coin, coinX + 2, DRAW_camera.y + 5, 16, 16);
+    }
+  else
+    {
+      var x, y;
+
+      x = DRAW_camera.x + gl.viewportWidth * 0.5 - 128;
+      y = DRAW_camera.y + gl.viewportHeight * 0.5 - 64;
+
+      DRAW_AddQuad (GFX_winner, x, y, 256, 64);
+
+      y += 128;
+
+      DRAW_AddQuad (GFX_howToRestart, x - 128, y, 512, 64);
+    }
 
   DRAW_Flush ();
 }
@@ -1624,7 +1710,7 @@ function GAME_Update ()
 
   GAME_Draw (deltaTime);
 
-  if (!SYS_keys['H'] && avatarHealth)
+  if (!SYS_keys['H'] && (deathAlpha < 1.0) && coinsLeft)
     GAME_Move (deltaTime);
 
   requestAnimFrame (GAME_Update);
