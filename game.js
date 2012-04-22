@@ -17,6 +17,25 @@
 
 /***********************************************************************/
 
+soundManager.preferFlash = true;
+soundManager.flashVersion = 9;
+soundManager.url = 'swf/';
+/*soundManager.wmode = 'transparent';*/
+
+soundManager.onload = function() {
+  soundManager.createSound({ id:'big-explode', url:'sfx/big-explode.mp3', multiShot: true, autoLoad: true });
+  soundManager.createSound({ id:'coin', url:'sfx/coin.mp3', multiShot: true, autoLoad: true });
+  soundManager.createSound({ id:'explode', url:'sfx/explode.mp3', multiShot: true, autoLoad: true });
+  soundManager.createSound({ id:'jump', url:'sfx/jump.mp3', multiShot: true, autoLoad: true });
+  soundManager.createSound({ id:'laser', url:'sfx/laser.mp3', multiShot: true, autoLoad: true });
+  soundManager.createSound({ id:'teleport', url:'sfx/teleport.mp3', multiShot: true, autoLoad: true });
+}
+
+soundManager.onerror = function() {
+}
+
+/***********************************************************************/
+
 var DRAW_vertices = new Array ();
 var DRAW_textureCoords = new Array ();
 var DRAW_currentTexture;
@@ -442,7 +461,7 @@ function SYS_Init ()
   document.onkeydown = function (event) { GAME_KeyPressed (event); };
   document.onkeyup = function (event) { GAME_KeyRelease (event); };
   canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); }
-  canvas.onmousedown = function (event) { GAME_ButtonPressed (event); }
+  document.onmousedown = function () { GAME_ButtonPressed (); }
   canvas.onselectstart = function () { return false; }
 
   gl.viewportWidth = canvas.width;
@@ -461,6 +480,8 @@ function SYS_Init ()
 
 /***********************************************************************/
 
+var baddieSpawnTimer = 10.0;
+var bombSpawnTimer = 10.0;
 var baddies = [];
 var bombs = [];
 var planets = [];
@@ -718,6 +739,9 @@ function GAME_Reset ()
   particles = [];
   elapsed = 0;
 
+  baddieSpawnTimer = 10.0;
+  bombSpawnTimer = 10.0;
+
   DRAW_camera = new Object;
   DRAW_camera.x = -400.0;
   DRAW_camera.y = -300.0;
@@ -752,8 +776,10 @@ function GAME_Init ()
 
   GAME_Reset ();
 
+  /*
   setTimeout("GAME_BaddiesSpawn()", 1000);
   setTimeout("GAME_BombsSpawn()", 1000);
+  */
 
   GAME_Update ();
 }
@@ -836,6 +862,12 @@ function GAME_KeyPressed(e)
 
   switch (String.fromCharCode (e.keyCode))
     {
+    case 'F':
+
+      GAME_ButtonPressed ();
+
+      break;
+
     case 'W':
 
       if (homePlanet != (nextPlanet = GAME_NearestPlanet ()))
@@ -843,6 +875,7 @@ function GAME_KeyPressed(e)
           var deltaX, deltaY;
           var avatarPosition;
 
+          soundManager.play('teleport',{volume:10});
           avatarPosition = GAME_AvatarPosition (16);
           teleportFromX = avatarPosition.x;
           teleportFromY = avatarPosition.y;
@@ -871,7 +904,10 @@ function GAME_KeyPressed(e)
     case ' ':
 
       if (avatarAltitude == 0)
-        yVel = 200;
+        {
+          yVel = 200;
+          soundManager.play('jump', {volume:20});
+        }
       else if (hasDoubleJump && yVel < 120)
         {
           yVel = 120;
@@ -893,10 +929,13 @@ function GAME_MouseMoved (ev, el)
   SYS_mouseY = ev.pageY - el.offsetTop;
 }
 
-function GAME_ButtonPressed (ev)
+function GAME_ButtonPressed ()
 {
   if (laserAge > 0.15)
-    laserAge = 0.0;
+    {
+      laserAge = 0.0;
+      soundManager.play ('laser',{volume:20});
+    }
 }
 
 function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
@@ -1021,11 +1060,7 @@ function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
       discr = b * b - 4 * c;
 
       if (discr < 0)
-        {
-          ++i;
-
-          continue;
-        }
+        continue;
 
       discr = Math.sqrt (discr);
 
@@ -1066,6 +1101,8 @@ function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
 
           if (baddie.health < 0)
             {
+              soundManager.play('big-explode',{volume:20});
+
               for (var j = 0; j < 40; ++j)
                 {
                   particle = new Object;
@@ -1082,6 +1119,8 @@ function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
         }
       else if (hitObjectType == 'mine')
         {
+          soundManager.play('explode',{volume:20});
+
           mine = planets[hitObject].coins[hitSubObject];
           help1Done = true;
 
@@ -1244,10 +1283,12 @@ function GAME_PlanetsDraw ()
               if (coin.friendly)
                 {
                   avatarHealth += 50;
+                  soundManager.play('coin', {volume:20});
                   --coinsLeft;
                 }
               else
                 {
+                  soundManager.play('explode',{volume:20});
                   avatarHealth *= 0.5;
                   hitAlpha = 1.0;
 
@@ -1399,7 +1440,7 @@ function GAME_Draw (deltaTime)
     {
       var targetAlpha;
       
-      if (avatarHealth > 10)
+      if (avatarHealth > 50)
         targetAlpha = 1.0 - avatarHealth / 500.0;
       else
         targetAlpha = 1.0;
@@ -1499,7 +1540,7 @@ function GAME_BaddiesSpawn ()
         GAME_NewBaddie (DRAW_camera.x + gl.viewportWidth * 0.5, DRAW_camera.y + gl.viewportHeight + 30);
     }
 
-  setTimeout("GAME_BaddiesSpawn()", 10000);
+  baddieSpawnTimer = 10.0; 
 }
 
 function GAME_BombsSpawn ()
@@ -1511,13 +1552,22 @@ function GAME_BombsSpawn ()
                     baddies[i].velY * 0.5 + (Math.random () - 0.5) * 50);
     }
 
-  setTimeout("GAME_BombsSpawn()", 1000);
+  bombSpawnTimer = 1.0 + Math.random ();
 }
 
 function GAME_Move (deltaTime)
 {
   var friction;
   var hPlanet;
+
+  baddieSpawnTimer -= deltaTime;
+  bombSpawnTimer -= deltaTime;
+
+  if (baddieSpawnTimer < 0.0)
+    GAME_BaddiesSpawn ();
+
+  if (bombSpawnTimer < 0.0)
+    GAME_BombsSpawn ();
 
   laserAge += deltaTime;
   teleportAge += deltaTime;
@@ -1559,6 +1609,7 @@ function GAME_Move (deltaTime)
               particles.push (particle);
             }
 
+          soundManager.play('big-explode',{volume:20});
           baddies.splice (i, 1);
 
           continue;
@@ -1601,6 +1652,7 @@ function GAME_Move (deltaTime)
 
       if (deltaX * deltaX + deltaY * deltaY < 13 * 13)
         {
+          soundManager.play('explode',{volume:20});
           avatarHealth *= 0.8;
           hitAlpha = 1.0;
           collide = true;
@@ -1619,6 +1671,7 @@ function GAME_Move (deltaTime)
 
               if (magnitude < planet.radius * planet.radius)
                 {
+                  soundManager.play('explode',{volume:20});
                   collide = true;
 
                   break;
