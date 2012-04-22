@@ -1,4 +1,19 @@
-var gl;
+/*  Untitled Game
+    Copyright (C) 2012  Morten Hustveit
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /***********************************************************************/
 
@@ -259,6 +274,27 @@ function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
   DRAW_textureCoords.push (t0);
 }
 
+function DRAW_Number (number, x, y)
+{
+  DRAW_SetAlpha (1.0);
+
+  do
+    {
+      var digit;
+      var s0;
+
+      digit = number % 10;
+
+      s0 = digit * 11 / 256.0;
+
+      DRAW_AddQuadST (GFX_font, x, y, 11, 16, s0, 1, s0 + 11 / 256.0, 0);
+
+      x -= 11;
+      number = Math.floor (number / 10);
+    }
+  while (number > 0);
+}
+
 /* Pivot: Bottom center */
 function DRAW_AddQuadAngle (texture, x, y, width, height, angle, flipped)
 {
@@ -383,10 +419,9 @@ function DRAW_AddCircle (texture, x, y, radius)
 
 /***********************************************************************/
 
-var keys = {};
-var lastTime = 0;
-
+var SYS_keys = {};
 var SYS_mouseX = 0, SYS_mouseY = 0;
+var lastTime = 0;
 
 function SYS_Init ()
 {
@@ -397,8 +432,9 @@ function SYS_Init ()
 
   document.onkeydown = function (event) { GAME_KeyPressed (event); };
   document.onkeyup = function (event) { GAME_KeyRelease (event); };
-  document.getElementById('game-canvas').onmousemove = function (event) { GAME_MouseMoved (event, this); }
-  document.getElementById('game-canvas').onmousedown = function (event) { GAME_ButtonPressed (event); }
+  canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); }
+  canvas.onmousedown = function (event) { GAME_ButtonPressed (event); }
+  canvas.onselectstart = function () { return false; }
 
   gl.viewportWidth = canvas.width;
   gl.viewportHeight = canvas.height;
@@ -429,24 +465,28 @@ var teleportFromX, teleportFromY;
 var teleportToX, teleportToY;
 var teleportAge = 1.0;
 
-var GFX_planets = [];
-var planetSelector;
-var GFX_black;
-var GFX_avatar, GFX_arm;
 var GFX_atmosphere;
-var GFX_baddie;
-var GFX_bomb;
+var GFX_avatar, GFX_arm;
 var GFX_avatarWalk = [];
-var stars0, stars1;
+var GFX_baddie;
+var GFX_black;
+var GFX_bomb;
+var GFX_coin;
+var GFX_font;
+var GFX_help;
 var GFX_laser;
+var GFX_mine;
+var GFX_particle0;
+var GFX_planetSelector;
+var GFX_planets = [];
+var GFX_stars0, GFX_stars1;
 var GFX_teleport;
 var GFX_teleportMachine;
-var GFX_coin;
-var GFX_particle0;
 
 var avatarAngle = 0, avatarAltitude = 0, yVel = 0, xVel = 0, avatarFlipped = true;
 var avatarWalkDistance = 0.0;
 var avatarHealth = 500.0;
+var coinsLeft = 0;
 var homePlanet = 0;
 
 function GAME_NewPlanet (x, y, radius)
@@ -466,10 +506,12 @@ function GAME_NewPlanet (x, y, radius)
 
       coin = new Object;
       coin.angle = i * Math.PI * 2 / 10.0;
-      if (Math.random () < 0.50)
+      if (Math.random () < 0.60)
         coin.altitude = 18;
       else
         coin.altitude = 50;
+      if (coin.friendly = Math.random () < 0.80)
+        ++coinsLeft;
 
       newPlanet.coins.push (coin);
     }
@@ -495,8 +537,6 @@ function GAME_NewBaddie (x, y)
 function GAME_NewBomb (x, y, velX, velY)
 {
   var bomb, avatarPosition, magnitude;
-
-  avatarPosition = GAME_AvatarPosition ();
 
   bomb = new Object;
   bomb.x = x;
@@ -585,27 +625,30 @@ function GAME_FindTeleports ()
 
 function GAME_SetupTextures ()
 {
-  GFX_laser = DRAW_LoadTexture ("gfx/laser.png");
-  GFX_teleport = DRAW_LoadTexture ("gfx/teleport.png");
-  GFX_teleportMachine = DRAW_LoadTexture ("gfx/teleport-machine.png");
-  GFX_coin = DRAW_LoadTexture ("gfx/coin.png");
-  GFX_particle0 = DRAW_LoadTexture ("gfx/particle0.png");
-  stars0 = DRAW_LoadTexture ("gfx/stars0.png");
-  stars1 = DRAW_LoadTexture ("gfx/stars1.png");
-  GFX_baddie = DRAW_LoadTexture ("gfx/baddie.png");
-  GFX_bomb = DRAW_LoadTexture ("gfx/bomb.png");
-  GFX_black = DRAW_LoadTexture ("gfx/black.png");
-  GFX_avatar = DRAW_LoadTexture ("gfx/avatar.png");
   GFX_arm = DRAW_LoadTexture ("gfx/arm.png");
+  GFX_atmosphere = DRAW_LoadTexture ("gfx/atmosphere.png");
+  GFX_avatar = DRAW_LoadTexture ("gfx/avatar.png");
   GFX_avatarWalk.push (DRAW_LoadTexture ("gfx/avatar0.png"));
   GFX_avatarWalk.push (GFX_avatar);
   GFX_avatarWalk.push (DRAW_LoadTexture ("gfx/avatar4.png"));
   GFX_avatarWalk.push (GFX_avatar);
+  GFX_baddie = DRAW_LoadTexture ("gfx/baddie.png");
+  GFX_black = DRAW_LoadTexture ("gfx/black.png");
+  GFX_bomb = DRAW_LoadTexture ("gfx/bomb.png");
+  GFX_coin = DRAW_LoadTexture ("gfx/coin.png");
+  GFX_font = DRAW_LoadTexture ("gfx/font.png");
+  GFX_help = DRAW_LoadTexture ("gfx/help.png");
+  GFX_laser = DRAW_LoadTexture ("gfx/laser.png");
+  GFX_mine = DRAW_LoadTexture ("gfx/mine.png");
+  GFX_particle0 = DRAW_LoadTexture ("gfx/particle0.png");
+  GFX_planetSelector = DRAW_LoadTexture ("gfx/planet-selector.png");
   GFX_planets.push(DRAW_LoadTexture ("gfx/planet0.png"));
   GFX_planets.push(DRAW_LoadTexture ("gfx/planet1.png"));
   GFX_planets.push(DRAW_LoadTexture ("gfx/planet2.png"));
-  planetSelector = DRAW_LoadTexture ("gfx/planet-selector.png");
-  GFX_atmosphere = DRAW_LoadTexture ("gfx/atmosphere.png");
+  GFX_stars0 = DRAW_LoadTexture ("gfx/stars0.png");
+  GFX_stars1 = DRAW_LoadTexture ("gfx/stars1.png");
+  GFX_teleport = DRAW_LoadTexture ("gfx/teleport.png");
+  GFX_teleportMachine = DRAW_LoadTexture ("gfx/teleport-machine.png");
 }
 
 function GAME_GenPlanet ()
@@ -683,20 +726,24 @@ function GAME_SkyDraw ()
   s1x = DRAW_camera.x * 0.000075;
   s1y = DRAW_camera.y * 0.000075;
 
-  DRAW_AddQuadST (stars0, DRAW_camera.x, DRAW_camera.y, gl.viewportWidth, gl.viewportHeight,
+  DRAW_AddQuadST (GFX_stars0, DRAW_camera.x, DRAW_camera.y, gl.viewportWidth, gl.viewportHeight,
                   s0x, s0y, s0x + 1.0, s0y + gl.viewportHeight / gl.viewportWidth);
-  DRAW_AddQuadST (stars1, DRAW_camera.x, DRAW_camera.y, gl.viewportWidth, gl.viewportHeight,
+
+  DRAW_SetBlendMode (1);
+  DRAW_AddQuadST (GFX_stars1, DRAW_camera.x, DRAW_camera.y, gl.viewportWidth, gl.viewportHeight,
                   s1x, s1y, s1x + 1.0, s1y + gl.viewportHeight / gl.viewportWidth);
+
+  DRAW_SetBlendMode (0);
 }
 
-function GAME_AvatarPosition ()
+function GAME_AvatarPosition (up)
 {
   var planet;
   var result = new Object;
 
   planet = planets[homePlanet];
 
-  y = avatarAltitude + planet.radius + 20;
+  y = avatarAltitude + planet.radius + up;
 
   result.x = planet.x + Math.cos(avatarAngle - Math.PI * 0.5) * y;
   result.y = planet.y + Math.sin(avatarAngle - Math.PI * 0.5) * y;
@@ -741,10 +788,10 @@ function GAME_KeyPressed(e)
 
   ch = String.fromCharCode (e.keyCode);
 
-  if (keys[ch])
+  if (SYS_keys[ch])
     return;
 
-  keys[ch] = true;
+  SYS_keys[ch] = true;
 
   switch (String.fromCharCode (e.keyCode))
     {
@@ -755,7 +802,7 @@ function GAME_KeyPressed(e)
           var deltaX, deltaY;
           var avatarPosition;
 
-          avatarPosition = GAME_AvatarPosition ();
+          avatarPosition = GAME_AvatarPosition (16);
           teleportFromX = avatarPosition.x;
           teleportFromY = avatarPosition.y;
 
@@ -766,7 +813,7 @@ function GAME_KeyPressed(e)
           avatarAngle = Math.atan2(-deltaX, deltaY);
           avatarFlipped = !avatarFlipped;
 
-          avatarPosition = GAME_AvatarPosition ();
+          avatarPosition = GAME_AvatarPosition (16);
           teleportToX = avatarPosition.x;
           teleportToY = avatarPosition.y;
           teleportAge = 0.0;
@@ -790,7 +837,7 @@ function GAME_KeyPressed(e)
 
 function GAME_KeyRelease (e)
 {
-  keys[String.fromCharCode (e.keyCode)] = false;
+  SYS_keys[String.fromCharCode (e.keyCode)] = false;
 }
 
 function GAME_MouseMoved (ev, el)
@@ -807,9 +854,13 @@ function GAME_ButtonPressed (ev)
 
 function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
 {
-  var i;
+  var i, j;
   var distance = 1000.0;
   var magnitude;
+  var hitObject = -1, hitSubObject, hitObjectType;
+  var deltaX, deltaY;
+  var dist;
+  var a, b, c, d, discr;
 
   magnitude = Math.sqrt(dirX * dirX + dirY * dirY);
   dirX /= magnitude;
@@ -818,14 +869,14 @@ function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
   for (i = 0; i < planets.length; ++i)
     {
       var planet;
-      var a, b, c, d, discr;
-      var deltaX, deltaY;
-      var dist;
 
       planet = planets[i];
 
       deltaX = fromX - planet.x;
       deltaY = fromY - planet.y;
+
+      if (!(planet.inRange = deltaX * deltaX + deltaY * deltaY < 1000 * 1000))
+        continue;
 
       b = 2 * (deltaX * dirX + deltaY * dirY);
       c = deltaX * deltaX + deltaY * deltaY - planet.radius * planet.radius;
@@ -851,12 +902,66 @@ function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
         distance = dist;
     }
 
-  for (i = 0; i < baddies.length; )
+  for (i = 0; i < planets.length; ++i)
+    {
+      var planet, coins;
+
+      planet = planets[i];
+
+      if (!planet.inRange)
+        continue;
+
+      coins = planet.coins;
+
+      for (j = 0; j < coins.length; ++j)
+        {
+          var coin;
+          var x, y;
+
+          coin = coins[j];
+
+          if (coin.friendly)
+            continue;
+
+          x = planet.x + Math.cos (coin.angle) * (planet.radius + coin.altitude) - 8;
+          y = planet.y + Math.sin (coin.angle) * (planet.radius + coin.altitude) - 8;
+
+          deltaX = fromX - x;
+          deltaY = fromY - y;
+
+          b = 2 * (deltaX * dirX + deltaY * dirY);
+          c = deltaX * deltaX + deltaY * deltaY - 16 * 16;
+
+          discr = b * b - 4 * c;
+
+          if (discr < 0)
+            continue;
+
+          discr = Math.sqrt (discr);
+
+          dist = (-b - discr) * 0.5;
+
+          if (dist < 0)
+            {
+              dist = (-b + discr) * 0.5;
+
+              if (dist < 0)
+                continue;
+            }
+
+          if (dist < distance)
+            {
+              distance = dist;
+              hitObject = i; 
+              hitSubObject = j;
+              hitObjectType = 'mine';
+            }
+        }
+    }
+
+  for (i = 0; i < baddies.length; ++i)
     {
       var baddie;
-      var a, b, c, d, discr;
-      var deltaX, deltaY;
-      var dist;
 
       baddie = baddies[i];
 
@@ -884,16 +989,26 @@ function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
           dist = (-b + discr) * 0.5;
 
           if (dist < 0)
-            {
-              ++i;
-
-              continue;
-            }
+            continue;
         }
 
       if (dist < distance)
         {
           distance = dist;
+          hitObject = i;
+          hitObjectType = 'baddie';
+        }
+    }
+
+  if (hitObject >= 0)
+    {
+      if (hitObjectType == 'baddie')
+        {
+          var baddie;
+
+          distance = dist;
+
+          baddie = baddies[hitObject];
 
           baddie.health -= (avatarAltitude ? 5 : 1) * deltaTime;
           baddie.velX += dirX * deltaTime * 1000;
@@ -912,13 +1027,29 @@ function GAME_RayCollide (fromX, fromY, dirX, dirY, deltaTime)
                   particles.push (particle);
                 }
 
-              baddies.splice (i, 1);
-
-              continue;
+              baddies.splice (hitObject, 1);
             }
         }
+      else if (hitObjectType == 'mine')
+        {
+          mine = planets[hitObject].coins[hitSubObject];
 
-      ++i;
+          x = planets[hitObject].x + Math.cos (mine.angle) * (planets[hitObject].radius + mine.altitude) - 8;
+          y = planets[hitObject].y + Math.sin (mine.angle) * (planets[hitObject].radius + mine.altitude) - 8;
+
+          for (var j = 0; j < 40; ++j)
+            {
+              particle = new Object;
+              particle.x = x;
+              particle.y = y;
+              particle.velX = (Math.random() - 0.5) * 32;
+              particle.velY = (Math.random() - 0.5) * 32;
+              particle.age = 0;
+              particles.push (particle);
+            }
+
+          planets[hitObject].coins.splice (hitSubObject, 1);
+        }
     }
 
   return distance;
@@ -996,7 +1127,7 @@ function GAME_CameraUpdate (deltaTime)
 {
   var target;
 
-  var avatarPosition = GAME_AvatarPosition ();
+  var avatarPosition = GAME_AvatarPosition (16);
   target = new Object;
   target.x = avatarPosition.x - gl.viewportWidth * 0.5;
   target.y = avatarPosition.y - gl.viewportHeight * 0.5;
@@ -1008,8 +1139,11 @@ function GAME_PlanetsDraw ()
 {
   var nearestPlanet;
   var i, j;
+  var coinAnim;
 
-  avatarPosition = GAME_AvatarPosition ();
+  coinAnim = Math.sin (elapsed * 2) * 3;
+
+  avatarPosition = GAME_AvatarPosition (16);
 
   nearestPlanet = GAME_NearestPlanet ();
 
@@ -1019,14 +1153,14 @@ function GAME_PlanetsDraw ()
       var coins = planet.coins;
       var teleports = planet.teleports;
 
-      DRAW_SetBlendMode (1);
-      DRAW_AddQuad (GFX_atmosphere, planet.x - planet.radius - 10, planet.y - planet.radius - 10, 2 * planet.radius + 20, 2 * planet.radius + 20);
-
       DRAW_SetBlendMode (0);
       DRAW_AddCircle (planet.sprite, planet.x, planet.y, planet.radius);
 
+      DRAW_SetBlendMode (1);
+      DRAW_AddQuad (GFX_atmosphere, planet.x - planet.radius - 16, planet.y - planet.radius - 16, 2 * planet.radius + 32, 2 * planet.radius + 32);
+
       if (i == nearestPlanet && nearestPlanet != homePlanet)
-        DRAW_AddQuad (planetSelector, planet.x - planet.radius - 10, planet.y - planet.radius - 10, 2 * planet.radius + 20, 2 * planet.radius + 20);
+        DRAW_AddQuad (GFX_planetSelector, planet.x - planet.radius - 10, planet.y - planet.radius - 10, 2 * planet.radius + 20, 2 * planet.radius + 20);
 
       for (j = 0; j < coins.length; )
         {
@@ -1034,15 +1168,35 @@ function GAME_PlanetsDraw ()
           var x, y;
           var deltaX, deltaY;
 
-          x = planet.x + Math.cos (coin.angle) * (planet.radius + coin.altitude) - 8;
-          y = planet.y + Math.sin (coin.angle) * (planet.radius + coin.altitude) - 8;
+          x = planet.x + Math.cos (coin.angle) * (planet.radius + coin.altitude + coinAnim) - 8;
+          y = planet.y + Math.sin (coin.angle) * (planet.radius + coin.altitude + coinAnim) - 8;
 
           deltaX = avatarPosition.x - x;
           deltaY = avatarPosition.y - y;
 
           if (deltaX * deltaX + deltaY * deltaY < 22 * 22)
             {
-              avatarHealth += 50;
+              if (coin.friendly)
+                {
+                  avatarHealth += 50;
+                  --coinsLeft;
+                }
+              else
+                {
+                  avatarHealth *= 0.5;
+
+                  for (var k = 0; k < 10; ++k)
+                    {
+                      particle = new Object;
+                      particle.x = x;
+                      particle.y = y;
+                      particle.velX = (Math.random() - 0.5) * 32;
+                      particle.velY = (Math.random() - 0.5) * 32;
+                      particle.age = 0;
+                      particles.push (particle);
+                    }
+                }
+
               coins.splice (j, 1);
 
               continue;
@@ -1050,7 +1204,7 @@ function GAME_PlanetsDraw ()
           else
             ++j;
 
-          DRAW_AddQuad (GFX_coin, x, y, 16, 16);
+          DRAW_AddQuad (coin.friendly ? GFX_coin : GFX_mine, x, y, 16, 16);
         }
 
       for (j = 0; j < teleports.length; ++j)
@@ -1085,7 +1239,7 @@ function GAME_Draw (deltaTime)
       var toX, toY;
       var distance;
 
-      avatarPosition = GAME_AvatarPosition ();
+      avatarPosition = GAME_AvatarPosition (20);
 
       toX = SYS_mouseX + DRAW_camera.x;
       toY = SYS_mouseY + DRAW_camera.y;
@@ -1173,10 +1327,10 @@ function GAME_Draw (deltaTime)
       DRAW_AddQuad (GFX_particle0, particle.x - scale, particle.y - scale, scale * 2, scale * 2);
     }
 
+  DRAW_SetBlendMode (0);
+
   if (avatarHealth < 500.0)
     {
-      DRAW_SetBlendMode (0);
-
       if (avatarHealth > 0.0)
         DRAW_SetAlpha (1.0 - avatarHealth / 500.0);
       else
@@ -1184,6 +1338,14 @@ function GAME_Draw (deltaTime)
 
       DRAW_AddQuad (GFX_black, DRAW_camera.x, DRAW_camera.y, gl.viewportWidth, gl.viewportHeight);
     }
+
+  if (SYS_keys['H'])
+    {
+      DRAW_SetAlpha (1.0);
+      DRAW_AddQuad (GFX_help, DRAW_camera.x + gl.viewportWidth * 0.5 - gl.viewportHeight * 0.5, DRAW_camera.y, gl.viewportHeight, gl.viewportHeight);
+    }
+
+  DRAW_Number (coinsLeft, DRAW_camera.x + 100, DRAW_camera.y + 100);
 
   DRAW_Flush ();
 }
@@ -1219,28 +1381,17 @@ function GAME_BombsSpawn ()
   setTimeout("GAME_BombsSpawn()", 1000);
 }
 
-function GAME_Update ()
+function GAME_Move (deltaTime)
 {
-  var timeNow, deltaTime;
-  var avatarPosition;
   var friction;
   var hPlanet;
-
-  timeNow = new Date ().getTime ();
-  deltaTime = (timeNow - lastTime) * 0.001;
-  lastTime = timeNow;
-
-  if (deltaTime < 0 || deltaTime > 0.05)
-    deltaTime = 0.05;
-
-  GAME_Draw (deltaTime);
 
   laserAge += deltaTime;
   teleportAge += deltaTime;
 
   hPlanet = planets[homePlanet];
 
-  avatarPosition = GAME_AvatarPosition ();
+  avatarPosition = GAME_AvatarPosition (16);
 
   for (var i = 0; i < baddies.length; )
     {
@@ -1402,14 +1553,14 @@ function GAME_Update ()
 
   friction = avatarAltitude ? 0.3 : 1.0;
 
-  if (keys['A'])
+  if (SYS_keys['A'])
     {
       xVel -= friction * deltaTime * 6.0;
       if (xVel < -1.5)
         xVel = -1.5;
       avatarFlipped = false;
     }
-  else if (keys['D'])
+  else if (SYS_keys['D'])
     {
       xVel += friction * deltaTime * 6.0;
       if (xVel > 1.5)
@@ -1457,6 +1608,24 @@ function GAME_Update ()
   GAME_CameraUpdate (deltaTime);
 
   elapsed += deltaTime;
+}
+
+function GAME_Update ()
+{
+  var timeNow, deltaTime;
+  var avatarPosition;
+
+  timeNow = new Date ().getTime ();
+  deltaTime = (timeNow - lastTime) * 0.001;
+  lastTime = timeNow;
+
+  if (deltaTime < 0 || deltaTime > 0.033)
+    deltaTime = 0.033;
+
+  GAME_Draw (deltaTime);
+
+  if (!SYS_keys['H'] && avatarHealth)
+    GAME_Move (deltaTime);
 
   requestAnimFrame (GAME_Update);
 }
