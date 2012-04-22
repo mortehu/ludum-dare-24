@@ -440,6 +440,7 @@ var GFX_avatarWalk = [];
 var stars0, stars1;
 var GFX_laser;
 var GFX_teleport;
+var GFX_teleportMachine;
 var GFX_coin;
 var GFX_particle0;
 
@@ -456,6 +457,7 @@ function GAME_NewPlanet (x, y, radius)
   newPlanet.y = y;
   newPlanet.radius = radius;
   newPlanet.coins = [];
+  newPlanet.teleports = [];
   newPlanet.sprite = GFX_planets [Math.floor (Math.random () * GFX_planets.length) % GFX_planets.length];
 
   for (var i = 0; i < 10; ++i)
@@ -550,10 +552,42 @@ function GAME_NearestPlanet ()
   return result;
 }
 
+function GAME_FindTeleports ()
+{
+  var i, j;
+  var planetA, planetB;
+  var deltaX, deltaY;
+  var distance, angle;
+
+  for (i = 0; i < planets.length; ++i)
+    {
+      planetA = planets[i];
+
+      for (j = i + 1; j < planets.length; ++j)
+        {
+          planetB = planets[j];
+
+          deltaX = planetB.x - planetA.x;
+          deltaY = planetB.y - planetA.y;
+
+          distance = deltaX * deltaX + deltaY * deltaY;
+
+          if (distance > 300000)
+            continue;
+
+          angle = Math.atan2 (deltaX, -deltaY) - Math.PI * 0.5;
+
+          planetA.teleports.push (angle);
+          planetB.teleports.push ((angle + Math.PI) % (2 * Math.PI));
+        }
+    }
+}
+
 function GAME_SetupTextures ()
 {
   GFX_laser = DRAW_LoadTexture ("gfx/laser.png");
   GFX_teleport = DRAW_LoadTexture ("gfx/teleport.png");
+  GFX_teleportMachine = DRAW_LoadTexture ("gfx/teleport-machine.png");
   GFX_coin = DRAW_LoadTexture ("gfx/coin.png");
   GFX_particle0 = DRAW_LoadTexture ("gfx/particle0.png");
   stars0 = DRAW_LoadTexture ("gfx/stars0.png");
@@ -610,7 +644,7 @@ function GAME_GenPlanet ()
   if (iters == 1000)
     return;
 
-  GAME_NewPlanet (x, y, 64 + Math.random() * 128);
+  GAME_NewPlanet (x, y, 64 + Math.random() * 64);
 }
 
 function GAME_Init ()
@@ -631,6 +665,8 @@ function GAME_Init ()
 
   for (i = 0; i < 16; ++i)
     GAME_GenPlanet ();
+
+  GAME_FindTeleports ();
 
   setTimeout("GAME_BaddiesSpawn()", 1000);
   setTimeout("GAME_BombsSpawn()", 1000);
@@ -695,7 +731,7 @@ function GAME_AvatarDraw ()
   deltaX = SYS_mouseX + DRAW_camera.x - armX;
   deltaY = SYS_mouseY + DRAW_camera.y - armY;
 
-  DRAW_AddQuadAngle (GFX_arm, armX, armY, 4, 8, Math.atan2 (deltaX, -deltaY));
+  DRAW_AddQuadAngle (GFX_arm, armX, armY, 4, 8, Math.atan2 (deltaX, -deltaY), false);
   DRAW_AddQuadAngle (sprite, planet.x + c * y, planet.y + s * y, 32, 32, avatarAngle, avatarFlipped);
 }
 
@@ -971,15 +1007,17 @@ function GAME_CameraUpdate (deltaTime)
 function GAME_PlanetsDraw ()
 {
   var nearestPlanet;
+  var i, j;
 
   avatarPosition = GAME_AvatarPosition ();
 
   nearestPlanet = GAME_NearestPlanet ();
 
-  for (var i = 0; i < planets.length; ++i)
+  for (i = 0; i < planets.length; ++i)
     {
       var planet = planets[i];
       var coins = planet.coins;
+      var teleports = planet.teleports;
 
       DRAW_SetBlendMode (1);
       DRAW_AddQuad (GFX_atmosphere, planet.x - planet.radius - 10, planet.y - planet.radius - 10, 2 * planet.radius + 20, 2 * planet.radius + 20);
@@ -990,7 +1028,7 @@ function GAME_PlanetsDraw ()
       if (i == nearestPlanet && nearestPlanet != homePlanet)
         DRAW_AddQuad (planetSelector, planet.x - planet.radius - 10, planet.y - planet.radius - 10, 2 * planet.radius + 20, 2 * planet.radius + 20);
 
-      for (var j = 0; j < coins.length; )
+      for (j = 0; j < coins.length; )
         {
           var coin = coins[j];
           var x, y;
@@ -1013,6 +1051,19 @@ function GAME_PlanetsDraw ()
             ++j;
 
           DRAW_AddQuad (GFX_coin, x, y, 16, 16);
+        }
+
+      for (j = 0; j < teleports.length; ++j)
+        {
+          var teleport;
+          var x, y;
+
+          teleport = teleports[j];
+
+          x = planet.x + Math.cos (teleport) * planet.radius;
+          y = planet.y + Math.sin (teleport) * planet.radius;
+
+          DRAW_AddQuadAngle (GFX_teleportMachine, x, y, 16, 16, teleport + Math.PI * 0.5, false);
         }
     }
 }
@@ -1153,7 +1204,7 @@ function GAME_BaddiesSpawn ()
         GAME_NewBaddie (DRAW_camera.x + gl.viewportWidth * 0.5, DRAW_camera.y + gl.viewportHeight + 50);
     }
 
-  setTimeout("GAME_BaddiesSpawn()", 15000);
+  setTimeout("GAME_BaddiesSpawn()", 10000);
 }
 
 function GAME_BombsSpawn ()
@@ -1244,8 +1295,8 @@ function GAME_Update ()
         }
       else
         {
-          target.x = hPlanet.x + Math.sin (avatarAngle) * 271;
-          target.y = hPlanet.y - Math.cos (avatarAngle) * 271;
+          target.x = hPlanet.x + Math.sin (avatarAngle + i) * 271;
+          target.y = hPlanet.y - Math.cos (avatarAngle + i) * 271;
         }
 
       GAME_Cruise (baddie, target, 600.0, 600.0, deltaTime);
