@@ -284,7 +284,7 @@ function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
 
 /***********************************************************************/
 
-function VEC_Cruise (position, target, maxAcceleration, maxVelocity, deltaTime)
+function VEC_CruiseTo (position, target, maxAcceleration, maxVelocity, deltaTime)
 {
   var distance;
   var dirX, dirY;
@@ -422,8 +422,6 @@ function GAME_Draw (deltaTime)
 {
   gl.uniform4f (gl.getUniformLocation (shaderProgram, "uniform_Camera"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight, GAME_camera.x, GAME_camera.y);
 
-  DRAW_SetAlpha (1.0);
-
   DRAW_SetBlendMode (1);
   DRAW_SetAlpha (1.0);
 
@@ -444,12 +442,12 @@ function GAME_Update ()
 
   if (GAME_cameraMovingRight)
     {
-      if (VEC_Cruise (GAME_camera, GAME_cameraTargetRight, 500, 1000, deltaTime))
+      if (VEC_CruiseTo (GAME_camera, GAME_cameraTargetRight, 500, 1000, deltaTime))
        GAME_cameraMovingRight = false;
     }
   else
     {
-      if (VEC_Cruise (GAME_camera, GAME_cameraTargetLeft, 500, 1000, deltaTime))
+      if (VEC_CruiseTo (GAME_camera, GAME_cameraTargetLeft, 500, 1000, deltaTime))
        GAME_cameraMovingRight = true;
     }
 
