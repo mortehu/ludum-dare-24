@@ -21,11 +21,13 @@ soundManager.preferFlash = true;
 soundManager.flashVersion = 9;
 soundManager.url = 'swf/';
 
-soundManager.onload = function() {
+soundManager.onload = function()
+{
   soundManager.createSound({ id:'placeholder', url:'sfx/sine.mp3', multiShot: true, autoLoad: true });
 }
 
-soundManager.onerror = function() {
+soundManager.onerror = function()
+{
 }
 
 /***********************************************************************/
@@ -35,6 +37,9 @@ var DRAW_textureCoords = new Array ();
 var DRAW_currentTexture;
 var DRAW_alpha = 1.0;
 var DRAW_blendMode = 0;
+
+var vertexPositionBuffer;
+var texCoordBuffer;
 
 function DRAW_SetupShaders ()
 {
@@ -62,6 +67,15 @@ function DRAW_SetupShaders ()
   gl.enableVertexAttribArray (shaderProgram.textureCoordAttribute);
 
   gl.uniform1i (gl.getUniformLocation (shaderProgram, "uniform_Sampler"), 0);
+
+  vertexPositionBuffer = gl.createBuffer ();
+  texCoordBuffer = gl.createBuffer ();
+
+  gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.vertexAttribPointer (shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+
+  gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
+  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
 }
 
 function DRAW_SetBlendMode (mode)
@@ -138,8 +152,6 @@ function DRAW_HandleLoadedTexture (texture)
 function DRAW_Flush ()
 {
   var vertexCount;
-  var vertexPositionBuffer;
-  var texCoordBuffer;
 
   vertexCount = DRAW_vertices.length / 3;
 
@@ -154,27 +166,15 @@ function DRAW_Flush ()
     case 1: gl.blendFunc (gl.SRC_ALPHA, gl.ONE); break;
     }
 
-  vertexPositionBuffer = gl.createBuffer ();
-  gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_vertices), gl.STATIC_DRAW);
-
-  texCoordBuffer = gl.createBuffer ();
   gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_textureCoords), gl.STATIC_DRAW);
-
-  gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.vertexAttribPointer (shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
-
-  gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-
-  gl.drawArrays (gl.TRIANGLES, 0, vertexCount);
-
-  DRAW_vertices.length = 0;
+  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_textureCoords), gl.STREAM_DRAW);
   DRAW_textureCoords.length = 0;
 
-  gl.deleteBuffer (texCoordBuffer);
-  gl.deleteBuffer (vertexPositionBuffer);
+  gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
+  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_vertices), gl.STREAM_DRAW);
+  DRAW_vertices.length = 0;
+
+  gl.drawArrays (gl.TRIANGLES, 0, vertexCount);
 }
 
 function DRAW_SetAlpha (alpha)
@@ -352,10 +352,10 @@ function SYS_Init ()
   if (!(gl = WebGLUtils.setupWebGL (canvas)))
     return;
 
-  document.onkeydown = function (event) { GAME_KeyPressed (event); };
-  document.onkeyup = function (event) { GAME_KeyRelease (event); };
-  canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); }
-  document.onmousedown = function () { GAME_ButtonPressed (); }
+  document.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
+  document.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
+  canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); return false; }
+  document.onmousedown = function () { GAME_ButtonPressed (); return false; }
   canvas.onselectstart = function () { return false; }
 
   gl.viewportWidth = canvas.width;

@@ -23,8 +23,8 @@
 
   void main (void)
   {
-    gl_Position = vec4(-1.0 + ((attr_VertexPosition.x - uniform_Camera.z) * uniform_Camera.x) * 2.0,
-                        1.0 - ((attr_VertexPosition.y - uniform_Camera.w) * uniform_Camera.y) * 2.0, 0.0, 1.0);
+    gl_Position = vec4 (-1.0 + ((attr_VertexPosition.x - uniform_Camera.z) * uniform_Camera.x) * 2.0,
+                         1.0 - ((attr_VertexPosition.y - uniform_Camera.w) * uniform_Camera.y) * 2.0, 0.0, 1.0);
     var_TextureCoord = attr_TextureCoord;
     var_Alpha = attr_VertexPosition.z;
   }
@@ -40,7 +40,7 @@
   #credits a { color: #777; text-decoration: underline; }
   #credits a:hover { color: #aaa; text-decoration: underline; }
 </style>
-<title>Laser Coin Planets by Morten Hustveit</title>
+<title>Ludum Dare 24 Entry by Morten Hustveit</title>
 <body onload='GAME_Init ()'>
   <canvas id='game-canvas' width=1000 height=666 style='width: 1000px; height: 666px; border: 2px solid #000; display: block; margin: 20px auto'></canvas>
   <div id='credits'>Ludum Dare 24 Entry<br>&copy; 2012 <a href='mailto:morten.hustveit@gmail.com'>Morten Hustveit</a></div>
