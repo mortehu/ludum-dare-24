@@ -33,15 +33,43 @@
 <script src='webgl-utils.js'></script>
 <script src='game.js'></script>
 <style>
-  body { background: #1f2f3f; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #1f2f3f; }
   b { color: #fff !important; }
-  #game-canvas { cursor: crosshair; }
-  #credits { text-align: center; color: #aaa; }
-  #credits a { color: #777; text-decoration: underline; }
-  #credits a:hover { color: #aaa; text-decoration: underline; }
 </style>
 <title>Ludum Dare 24 Entry by Morten Hustveit</title>
 <body onload='GAME_Init ()'>
-  <canvas id='game-canvas' width=1000 height=666 style='width: 1000px; height: 666px; border: 2px solid #000; display: block; margin: 20px auto'></canvas>
-  <div id='credits'>Ludum Dare 24 Entry<br>&copy; 2012 <a href='mailto:morten.hustveit@gmail.com'>Morten Hustveit</a></div>
+  <canvas id='game-canvas' width=1000 height=666 style='display: block; margin: auto'></canvas>
+  <script>
+    function resize()
+    {
+      var gameCanvas, newWidth, newHeight;
+
+      if (window.innerWidth * 2 / 3 > window.innerHeight)
+      {
+        /* Need pillar box */
+
+        newHeight = window.innerHeight;
+        newWidth = newHeight * 3 / 2;
+      }
+      else
+      {
+        /* Need letter box */
+
+        newWidth = window.innerWidth;
+        newHeight = newHeight * 2 / 3;
+      }
+
+      gameCanvas = document.getElementById('game-canvas');
+
+      gameCanvas.style.width = newWidth + 'px';
+      gameCanvas.style.height = newHeight + 'px';
+      gameCanvas.width = newWidth;
+      gameCanvas.height = newHeight;
+    }
+
+    window.addEventListener('resize', resize, false);
+    window.addEventListener('orientationchange', resize, false);
+    resize ();
+  </script>
 </body>

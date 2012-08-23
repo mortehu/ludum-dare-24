@@ -41,6 +41,16 @@ var DRAW_blendMode = 0;
 var vertexPositionBuffer;
 var texCoordBuffer;
 
+function DRAW_UpdateViewport ()
+{
+  var canvas = document.getElementById ("game-canvas");
+
+  gl.viewportWidth = canvas.width;
+  gl.viewportHeight = canvas.height;
+
+  gl.viewport (0, 0, gl.viewportWidth, gl.viewportHeight);
+}
+
 function DRAW_SetupShaders ()
 {
   var fragmentShader = DRAW_GetShaderFromElement ("shader-fs");
@@ -352,16 +362,13 @@ function SYS_Init ()
   if (!(gl = WebGLUtils.setupWebGL (canvas)))
     return;
 
+  DRAW_UpdateViewport ();
+
   document.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
   document.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
   canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); return false; }
   document.onmousedown = function () { GAME_ButtonPressed (); return false; }
   canvas.onselectstart = function () { return false; }
-
-  gl.viewportWidth = canvas.width;
-  gl.viewportHeight = canvas.height;
-
-  gl.viewport (0, 0, gl.viewportWidth, gl.viewportHeight);
 
   DRAW_SetupShaders ();
 
@@ -420,6 +427,8 @@ function GAME_ButtonPressed ()
 
 function GAME_Draw (deltaTime)
 {
+  DRAW_UpdateViewport ();
+
   gl.uniform4f (gl.getUniformLocation (shaderProgram, "uniform_Camera"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight, GAME_camera.x, GAME_camera.y);
 
   DRAW_SetBlendMode (1);
@@ -439,6 +448,9 @@ function GAME_Update ()
 
   if (deltaTime < 0 || deltaTime > 0.033)
     deltaTime = 0.033;
+
+  GAME_cameraTargetRight = { x: 0, y: 0 };
+  GAME_cameraTargetLeft = { x: -(gl.viewportWidth - 256), y: -(gl.viewportHeight - 256) };
 
   if (GAME_cameraMovingRight)
     {
