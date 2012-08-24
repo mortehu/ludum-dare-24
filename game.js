@@ -32,6 +32,8 @@ soundManager.onerror = function()
 
 /***********************************************************************/
 
+var gl;
+
 var DRAW_vertices = new Array ();
 var DRAW_textureCoords = new Array ();
 var DRAW_currentTexture;
@@ -61,9 +63,9 @@ function DRAW_SetupShaders ()
   gl.attachShader (shaderProgram, fragmentShader);
   gl.linkProgram (shaderProgram);
 
-  if (!gl.getProgramParameter (shaderProgram, gl.LINK_STATUS))
+  if (!gl.getProgramParameter (shaderProgram, gl.LINK_STATUS) && !gl.isContextLost())
     {
-      alert ("Could not initialise shaders");
+      alert ("Could not link shaders");
 
       return;
     }
@@ -128,9 +130,9 @@ function DRAW_GetShaderFromElement (id)
   gl.shaderSource (shader, str);
   gl.compileShader (shader);
 
-  if (!gl.getShaderParameter (shader, gl.COMPILE_STATUS))
+  if (!gl.getShaderParameter (shader, gl.COMPILE_STATUS) && !gl.isContextLost())
     {
-      alert (gl.getShaderInfoLog (shader));
+      alert ("Shader compile error: " + gl.getShaderInfoLog (shader));
 
       return null;
     }
@@ -155,8 +157,8 @@ function DRAW_HandleLoadedTexture (texture)
   gl.bindTexture (gl.TEXTURE_2D, texture);
   gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
   gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
-  gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 }
 
 function DRAW_Flush ()
@@ -353,9 +355,10 @@ function VEC_CruiseTo (position, target, maxAcceleration, maxVelocity, deltaTime
 
 var SYS_keys = {};
 var SYS_mouseX = 0, SYS_mouseY = 0;
+var SYS_requestedAnimFrame;
 var lastTime = 0;
 
-function SYS_Init ()
+function SYS_SetupGL ()
 {
   var canvas = document.getElementById ("game-canvas");
 
@@ -364,12 +367,6 @@ function SYS_Init ()
 
   DRAW_UpdateViewport ();
 
-  document.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
-  document.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
-  canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); return false; }
-  document.onmousedown = function () { GAME_ButtonPressed (); return false; }
-  canvas.onselectstart = function () { return false; }
-
   DRAW_SetupShaders ();
 
   gl.clearColor (0.0, 0.0, 0.0, 0.0);
@@ -377,6 +374,32 @@ function SYS_Init ()
 
   gl.enable (gl.BLEND);
   gl.disable (gl.CULL_FACE);
+
+  GAME_SetupTextures ();
+
+  SYS_requestedAnimFrame = requestAnimFrame (GAME_Update);
+}
+
+function SYS_WebGLContextLost (event)
+{
+  event.preventDefault ();
+  cancelCancelRequestAnimationFrame (SYS_requestedAnimFrame);
+}
+
+function SYS_Init ()
+{
+  var canvas = document.getElementById ("game-canvas");
+
+  canvas.addEventListener("weblglcontextlost", SYS_WebGLContextLost, false);
+  canvas.addEventListener("webglcontextrestored", SYS_SetupGL, false);
+
+  SYS_SetupGL ();
+
+  document.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
+  document.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
+  canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); return false; }
+  document.onmousedown = function () { GAME_ButtonPressed (); return false; }
+  canvas.onselectstart = function () { return false; }
 }
 
 /***********************************************************************/
@@ -422,7 +445,6 @@ function GAME_MouseMoved (ev, el)
 
 function GAME_ButtonPressed ()
 {
-  soundManager.play('placeholder', {volume:100});
 }
 
 function GAME_Draw (deltaTime)
@@ -465,7 +487,7 @@ function GAME_Update ()
 
   GAME_Draw (deltaTime);
 
-  requestAnimFrame (GAME_Update);
+  SYS_requestedAnimFrame = requestAnimFrame (GAME_Update);
 }
 
 function GAME_SetupTextures ()
@@ -478,8 +500,4 @@ function GAME_Init ()
   var i;
 
   SYS_Init ();
-
-  GAME_SetupTextures ();
-
-  GAME_Update ();
 }

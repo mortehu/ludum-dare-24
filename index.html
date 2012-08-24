@@ -36,40 +36,9 @@
   html, body { margin: 0; padding: 0; }
   body { background: #1f2f3f; }
   b { color: #fff !important; }
+  #game-canvas { border: 1px solid white; margin: 20px auto; }
 </style>
 <title>Ludum Dare 24 Entry by Morten Hustveit</title>
-<body onload='GAME_Init ()'>
-  <canvas id='game-canvas' width=1000 height=666 style='display: block; margin: auto'></canvas>
-  <script>
-    function resize()
-    {
-      var gameCanvas, newWidth, newHeight;
-
-      if (window.innerWidth * 2 / 3 > window.innerHeight)
-      {
-        /* Need pillar box */
-
-        newHeight = window.innerHeight;
-        newWidth = newHeight * 3 / 2;
-      }
-      else
-      {
-        /* Need letter box */
-
-        newWidth = window.innerWidth;
-        newHeight = newHeight * 2 / 3;
-      }
-
-      gameCanvas = document.getElementById('game-canvas');
-
-      gameCanvas.style.width = newWidth + 'px';
-      gameCanvas.style.height = newHeight + 'px';
-      gameCanvas.width = newWidth;
-      gameCanvas.height = newHeight;
-    }
-
-    window.addEventListener('resize', resize, false);
-    window.addEventListener('orientationchange', resize, false);
-    resize ();
-  </script>
+<body onload='GAME_Init()'>
+  <canvas id='game-canvas' width=1000 height=666 style='display: block'></canvas>
 </body>
