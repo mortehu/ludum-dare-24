@@ -58,3 +58,25 @@ Game A: The Selfish Gene
      - Simple controls
      - Economy inherent
      - Educational
+
+Game B: Blob Defense
+
+  - Core mechanic: Kill unwanted individuals.  Divide traits you want to duplicate
+
+  - Your individuals live in a circle fighting an onslaught of spiky things
+    damaging your membrane
+
+  - Traits:
+
+    - Muzzle velocity  (consumes energy)
+    - Projectile mass  (consumes mass)
+    - Aim              (consumes energy)
+    - Repair           (consumes energy and mass)
+    - Catabolism       (convert mass to energy)
+    - Anabolism        (converts energy to mass)
+    - XXX              (store energy)
+    - YYY              (store mass)
+
+  - Energy comes constantly from the sun
+
+  - Mass comes from killed baddies and the initial
