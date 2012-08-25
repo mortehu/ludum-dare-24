@@ -257,7 +257,7 @@ function DRAW_AddQuad (texture, x, y, width, height)
 
 function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
 {
-  var sector, ps, pc;
+  var sector, ps, pc, sectorCount;
 
   if (texture != DRAW_currentTexture)
     DRAW_Flush ();
@@ -267,16 +267,18 @@ function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
   ps = 0.0;
   pc = 1.0;
 
+  sectorCount = Math.floor (Math.sqrt (2 * Math.PI * outerRadius) * 2);
+
   if (innerRadius > 0)
     {
       /* Adjacent sectors */
 
-      for (sector = 0; sector < 60; ++sector)
+      for (sector = 0; sector < sectorCount; ++sector)
         {
           var s, c;
 
-          s = Math.sin((sector + 1) / 60.0 * 2 * Math.PI);
-          c = Math.cos((sector + 1) / 60.0 * 2 * Math.PI);
+          s = Math.sin((sector + 1) / sectorCount * 2 * Math.PI);
+          c = Math.cos((sector + 1) / sectorCount * 2 * Math.PI);
 
           DRAW_vertices.push (centerX + outerRadius * ps);
           DRAW_vertices.push (centerY + outerRadius * pc);
@@ -340,12 +342,12 @@ function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
     {
       /* Cake */
 
-      for (sector = 0; sector < 60; ++sector)
+      for (sector = 0; sector < sectorCount; ++sector)
         {
           var s, c;
 
-          s = Math.sin((sector + 1) / 60.0 * 2 * Math.PI);
-          c = Math.cos((sector + 1) / 60.0 * 2 * Math.PI);
+          s = Math.sin((sector + 1) / sectorCount * 2 * Math.PI);
+          c = Math.cos((sector + 1) / sectorCount * 2 * Math.PI);
 
           DRAW_vertices.push (centerX + outerRadius * ps);
           DRAW_vertices.push (centerY + outerRadius * pc);
