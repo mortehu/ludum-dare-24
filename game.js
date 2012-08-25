@@ -486,6 +486,8 @@ function SYS_Init ()
 
 var GFX_placeholder;
 var GAME_camera = { x: 0, y: 0, velX: 0, velY: 0 };
+var GAME_cells = new Array ();
+var GAME_autospawn = 0;
 
 var GAME_cameraMovingRight = true;
 
@@ -527,7 +529,7 @@ function GAME_ButtonPressed ()
 
 function GAME_Draw (deltaTime)
 {
-  var scale;
+  var blobX, blobY, i;
 
   DRAW_UpdateViewport ();
 
@@ -536,15 +538,86 @@ function GAME_Draw (deltaTime)
   DRAW_SetBlendMode (-1);
   DRAW_SetAlpha (1.0);
 
-  scale = gl.viewportHeight * 0.3;
+  blobX = 200 + 10;
+  blobY = gl.viewportHeight - 200 - 10;
 
-  DRAW_AddCircle (GFX_placeholder,                /* texture */
-                  scale + 10,                     /* X */
-                  gl.viewportHeight - scale - 10, /* Y */
-                  scale - 10,                     /* inner radius */
-                  scale);                         /* outer radius */
+  DRAW_AddCircle (GFX_placeholder,  /* texture */
+                  blobX,            /* X */
+                  blobY,            /* Y */
+                  200 - 10,         /* inner radius */
+                  200);             /* outer radius */
+
+  for (i = 0; i < GAME_cells.length; ++i)
+    {
+      var cell = GAME_cells[i];
+
+      DRAW_AddCircle (GFX_placeholder,  /* texture */
+                      cell.x + blobX,   /* X */
+                      cell.y + blobY,   /* Y */
+                      0.0,              /* inner radius */
+                      30);              /* outer radius */
+    }
 
   DRAW_Flush ();
+}
+
+function GAME_RepelCells (deltaTime)
+{
+  var i, j, updatedPositions, result = false;;
+
+  updatedPositions = new Array ();
+
+  for (i = 0; i < GAME_cells.length; ++i)
+    {
+      var forceX = 0.0, forceY = 0.0, mag;
+      var cellA;
+
+      cellA = GAME_cells[i];
+
+      for (j = 0; j < GAME_cells.length; ++j)
+        {
+          var cellB, tx, ty;
+
+          cellB = GAME_cells[j];
+
+          if (j == i)
+            continue;
+
+          tx = cellA.x - cellB.x;
+          ty = cellA.y - cellB.y;
+          mag = tx * tx + ty * ty;
+
+          if (mag < 60 * 60)
+            {
+              if (!mag)
+                {
+                  forceX += Math.random () * 2.0 - 1.0;
+                  forceY += Math.random () * 2.0 - 1.0;
+                }
+              else
+                {
+                  mag = Math.sqrt(mag);
+
+                  forceX += (cellA.x - cellB.x) / mag;
+                  forceY += (cellA.y - cellB.y) / mag;
+                }
+            }
+        }
+
+      if (!forceX && !forceY)
+        continue;
+
+      mag = Math.sqrt (forceX * forceX + forceY * forceY);
+      forceX /= mag;
+      forceY /= mag;
+
+      cellA.x += 50.0 * forceX * deltaTime;
+      cellA.y += 50.0 * forceY * deltaTime;
+
+      result = true;
+    }
+
+  return result;
 }
 
 function GAME_Update ()
@@ -558,6 +631,12 @@ function GAME_Update ()
   if (deltaTime < 0 || deltaTime > 0.033)
     deltaTime = 0.033;
 
+  if (!GAME_RepelCells (deltaTime) && GAME_autospawn)
+    {
+      GAME_cells.push (GAME_GenerateCell ());
+      --GAME_autospawn;
+    }
+
   GAME_Draw (deltaTime);
 
   SYS_requestedAnimFrame = requestAnimFrame (GAME_Update);
@@ -568,9 +647,32 @@ function GAME_SetupTextures ()
   GFX_placeholder = DRAW_LoadTexture ("gfx/placeholder.png");
 }
 
+function GAME_GenerateCell ()
+{
+  var result;
+
+  result = new Object ();
+  result.muzzleVelocity = 1.0;
+  result.projectileMass = 1.0;
+  result.aim = 1.0;
+  result.repair = 1.0;
+  result.catabolism = 1.0;
+  result.anabolism = 1.0;
+  result.energyStorage = 1.0;
+  result.massStorage = 1.0;
+  result.x = 0;
+  result.y = 0;
+
+  return result;
+}
+
 function GAME_Init ()
 {
   var i;
 
   SYS_Init ();
+
+  GAME_autospawn = 7;
+
+  GAME_cells.push (GAME_GenerateCell ());
 }
