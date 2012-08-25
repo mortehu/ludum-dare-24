@@ -615,7 +615,11 @@ function SYS_Init ()
 
 /***********************************************************************/
 
-var GFX_placeholder;
+var GFX_solid;
+var GFX_traitLegend;
+
+var GAME_cellTraits = ['muzzleVelocity', 'projectileMass', 'fireRate', 'aim', 'repair', 'catabolism', 'anabolism', 'energyStorage', 'massStorage'];
+
 var GAME_camera = { x: 0, y: 0, velX: 0, velY: 0 };
 var GAME_cells = new Array ();
 var GAME_baddies = new Array ();
@@ -661,7 +665,7 @@ function GAME_ButtonPressed ()
 
 function GAME_Draw (deltaTime)
 {
-  var blobX, blobY, i;
+  var blobX, blobY, i, focusSetThisFrame = false;
 
   DRAW_UpdateViewport ();
 
@@ -673,11 +677,9 @@ function GAME_Draw (deltaTime)
   blobX = 200 + 10;
   blobY = gl.viewportHeight - 200 - 10;
 
-  DRAW_AddCircle (GFX_placeholder, blobX, blobY,
+  DRAW_AddCircle (GFX_solid, blobX, blobY,
                   200 - 10,         /* inner radius */
                   200);             /* outer radius */
-
-  GAME_focusCell = -1;
 
   for (i = 0; i < GAME_cells.length; ++i)
     {
@@ -687,9 +689,7 @@ function GAME_Draw (deltaTime)
       x = cell.x + blobX;
       y = cell.y + blobY;
 
-      DRAW_SetColor (0.5, 0.8, 0.5, 1.0);
-
-      if (GAME_focusCell == -1)
+      if (!focusSetThisFrame)
         {
           var dx, dy;
 
@@ -700,11 +700,16 @@ function GAME_Draw (deltaTime)
             {
               GAME_focusCell = i;
 
-              DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
+              focusSetThisFrame = true;
             }
         }
 
-      DRAW_AddCircle (GFX_placeholder, x, y,
+      if (GAME_focusCell == i)
+        DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
+      else
+        DRAW_SetColor (0.5, 0.8, 0.5, 1.0);
+
+      DRAW_AddCircle (GFX_solid, x, y,
                       0.0,              /* inner radius */
                       30);              /* outer radius */
     }
@@ -715,10 +720,21 @@ function GAME_Draw (deltaTime)
     {
       var baddie = GAME_baddies[i];
 
-      DRAW_AddSpiky (GFX_placeholder, blobX + baddie.x, blobY + baddie.y,
+      DRAW_AddSpiky (GFX_solid, blobX + baddie.x, blobY + baddie.y,
                      baddie.radius * 0.5,  /* inner radius */
                      baddie.radius,        /* outer radius */
                      baddie.angle);
+    }
+
+  if (GAME_focusCell >= 0)
+    {
+      DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
+
+      for (i = 0; i < GAME_cellTraits.length; ++i)
+        DRAW_AddQuad (GFX_solid, 180, 14 + i * 20, 30 * GAME_cells[GAME_focusCell][GAME_cellTraits[i]], 10);
+
+      DRAW_SetBlendMode (0);
+      DRAW_AddQuad (GFX_traitLegend, 0, 0, 256, 256);
     }
 
   DRAW_Flush ();
@@ -837,7 +853,8 @@ function GAME_Update ()
 
 function GAME_SetupTextures ()
 {
-  GFX_placeholder = DRAW_LoadTexture ("gfx/placeholder.png");
+  GFX_solid = DRAW_LoadTexture ("gfx/solid.png");
+  GFX_traitLegend = DRAW_LoadTexture ("gfx/trait-legend.png");
 }
 
 function GAME_GenerateCell ()
@@ -846,13 +863,14 @@ function GAME_GenerateCell ()
 
   result = new Object ();
   result.muzzleVelocity = 1.0;
-  result.projectileMass = 1.0;
-  result.aim = 1.0;
-  result.repair = 1.0;
-  result.catabolism = 1.0;
-  result.anabolism = 1.0;
-  result.energyStorage = 1.0;
-  result.massStorage = 1.0;
+  result.projectileMass = 1.1;
+  result.fireRate = 1.2;
+  result.aim = 1.3;
+  result.repair = 1.5;
+  result.catabolism = 1.4;
+  result.anabolism = 1.7;
+  result.energyStorage = 1.1;
+  result.massStorage = 1.2;
   result.x = 0;
   result.y = 0;
 
