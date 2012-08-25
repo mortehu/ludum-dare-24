@@ -20,9 +20,25 @@ Game A: The Selfish Gene
      - green: converts atmospheric C+O + H+O into O and C+H
               grows until it dies
               after a certain age, makes copies
+              very low power
 
-     - white: converts atmospheric O and C+H into C+O and H+O
+     - beige: converts atmospheric O and C+H into C+O and H+O
               grows until a certain age, before it starts making smaller copies
+
+     - XXX: predator: eats smaller individuals
+
+     - XXX: altruist: gives away food to nearby starving individuals sharing
+                      this gene
+
+     - power: generates power from own mass more efficiently
+
+     - tail: locomotion: swims around.  longer tail is faster.  uses power.
+
+     - yellow head: fear: turns away from predators
+
+     - red dots: tetrodotoxin: kills whoever eats it
+
+     - aversion: avoids eating red dots
 
   - Big problems:
 
@@ -30,6 +46,7 @@ Game A: The Selfish Gene
      - Slow pace
      - No laser
      - Maybe too many entities for CPU?
+     - Everything will just move around like soup
 
   - Speed adjustable by means of logarithmic slider.  Helps solve problems of
     difficulty and pace.
