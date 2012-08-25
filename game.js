@@ -527,17 +527,24 @@ function GAME_ButtonPressed ()
 
 function GAME_Draw (deltaTime)
 {
+  var scale;
+
   DRAW_UpdateViewport ();
 
   gl.uniform4f (gl.getUniformLocation (shaderProgram, "uniform_Camera"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight, GAME_camera.x, GAME_camera.y);
 
-  DRAW_SetBlendMode (1);
+  DRAW_SetBlendMode (-1);
   DRAW_SetAlpha (1.0);
 
-  DRAW_AddQuad (GFX_placeholder, 0, 0, 256, 256);
-  DRAW_Flush ();
+  scale = gl.viewportHeight * 0.3;
 
-  DRAW_AddCircle (GFX_placeholder, 300, 300, 50, 60);
+  DRAW_AddCircle (GFX_placeholder,                /* texture */
+                  scale + 10,                     /* X */
+                  gl.viewportHeight - scale - 10, /* Y */
+                  scale - 10,                     /* inner radius */
+                  scale);                         /* outer radius */
+
+  DRAW_Flush ();
 }
 
 function GAME_Update ()
