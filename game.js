@@ -35,13 +35,11 @@ soundManager.onerror = function()
 var gl;
 
 var DRAW_vertices = new Array ();
-var DRAW_textureCoords = new Array ();
 var DRAW_currentTexture;
 var DRAW_alpha = 1.0;
 var DRAW_blendMode = 0;
 
 var vertexPositionBuffer;
-var texCoordBuffer;
 
 function DRAW_UpdateViewport ()
 {
@@ -81,13 +79,10 @@ function DRAW_SetupShaders ()
   gl.uniform1i (gl.getUniformLocation (shaderProgram, "uniform_Sampler"), 0);
 
   vertexPositionBuffer = gl.createBuffer ();
-  texCoordBuffer = gl.createBuffer ();
-
-  gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.vertexAttribPointer (shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
 
   gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, 20, 0);
+  gl.vertexAttribPointer (shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 20, 12);
 }
 
 function DRAW_SetBlendMode (mode)
@@ -165,7 +160,7 @@ function DRAW_Flush ()
 {
   var vertexCount;
 
-  vertexCount = DRAW_vertices.length / 3;
+  vertexCount = DRAW_vertices.length / 5;
 
   if (!vertexCount)
     return;
@@ -177,10 +172,6 @@ function DRAW_Flush ()
     case 0: gl.blendFunc (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); break;
     case 1: gl.blendFunc (gl.SRC_ALPHA, gl.ONE); break;
     }
-
-  gl.bindBuffer (gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_textureCoords), gl.STREAM_DRAW);
-  DRAW_textureCoords.length = 0;
 
   gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
   gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (DRAW_vertices), gl.STREAM_DRAW);
@@ -204,44 +195,38 @@ function DRAW_AddQuad (texture, x, y, width, height)
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (0.0);
+  DRAW_vertices.push (1.0);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y + height);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (0.0);
+  DRAW_vertices.push (0.0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (1.0);
+  DRAW_vertices.push (0.0);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (0.0);
+  DRAW_vertices.push (1.0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (1.0);
+  DRAW_vertices.push (0.0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y);
   DRAW_vertices.push (DRAW_alpha);
-
-  DRAW_textureCoords.push (0.0);
-  DRAW_textureCoords.push (1.0);
-
-  DRAW_textureCoords.push (0.0);
-  DRAW_textureCoords.push (0.0);
-
-  DRAW_textureCoords.push (1.0);
-  DRAW_textureCoords.push (0.0);
-
-  DRAW_textureCoords.push (0.0);
-  DRAW_textureCoords.push (1.0);
-
-  DRAW_textureCoords.push (1.0);
-  DRAW_textureCoords.push (0.0);
-
-  DRAW_textureCoords.push (1.0);
-  DRAW_textureCoords.push (1.0);
+  DRAW_vertices.push (1.0);
+  DRAW_vertices.push (1.0);
 }
 
 function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
@@ -254,44 +239,38 @@ function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (s0);
+  DRAW_vertices.push (t0);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y + height);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (s0);
+  DRAW_vertices.push (t1);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (s1);
+  DRAW_vertices.push (t1);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (s0);
+  DRAW_vertices.push (t0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
   DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (s1);
+  DRAW_vertices.push (t1);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y);
   DRAW_vertices.push (DRAW_alpha);
-
-  DRAW_textureCoords.push (s0);
-  DRAW_textureCoords.push (t0);
-
-  DRAW_textureCoords.push (s0);
-  DRAW_textureCoords.push (t1);
-
-  DRAW_textureCoords.push (s1);
-  DRAW_textureCoords.push (t1);
-
-  DRAW_textureCoords.push (s0);
-  DRAW_textureCoords.push (t0);
-
-  DRAW_textureCoords.push (s1);
-  DRAW_textureCoords.push (t1);
-
-  DRAW_textureCoords.push (s1);
-  DRAW_textureCoords.push (t0);
+  DRAW_vertices.push (s1);
+  DRAW_vertices.push (t0);
 }
 
 /***********************************************************************/
