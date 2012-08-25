@@ -332,7 +332,6 @@ function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
 
-
           ps = s;
           pc = c;
         }
@@ -378,6 +377,68 @@ function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
           ps = s;
           pc = c;
         }
+    }
+}
+
+function DRAW_AddSpiky (texture, centerX, centerY, innerRadius, outerRadius, angle)
+{
+  var sector, ps, pc;
+
+  if (texture != DRAW_currentTexture)
+    DRAW_Flush ();
+
+  DRAW_currentTexture = texture;
+
+  ps = Math.sin(angle) * innerRadius;
+  pc = Math.cos(angle) * innerRadius;
+
+  for (sector = 0; sector < 30; ++sector)
+    {
+      var s, c;
+
+      s = Math.sin((sector + 1) / 30.0 * 2 * Math.PI + angle);
+      c = Math.cos((sector + 1) / 30.0 * 2 * Math.PI + angle);
+
+      if (sector & 1)
+        {
+          s *= innerRadius;
+          c *= innerRadius;
+        }
+      else
+        {
+          s *= outerRadius;
+          c *= outerRadius;
+        }
+
+      DRAW_vertices.push (centerX + ps);
+      DRAW_vertices.push (centerY + pc);
+      DRAW_vertices.push (DRAW_red);
+      DRAW_vertices.push (DRAW_green);
+      DRAW_vertices.push (DRAW_blue);
+      DRAW_vertices.push (DRAW_alpha);
+      DRAW_vertices.push (0.0);
+      DRAW_vertices.push (0.0);
+
+      DRAW_vertices.push (centerX);
+      DRAW_vertices.push (centerY);
+      DRAW_vertices.push (DRAW_red);
+      DRAW_vertices.push (DRAW_green);
+      DRAW_vertices.push (DRAW_blue);
+      DRAW_vertices.push (DRAW_alpha);
+      DRAW_vertices.push (0.0);
+      DRAW_vertices.push (0.0);
+
+      DRAW_vertices.push (centerX + s);
+      DRAW_vertices.push (centerY + c);
+      DRAW_vertices.push (DRAW_red);
+      DRAW_vertices.push (DRAW_green);
+      DRAW_vertices.push (DRAW_blue);
+      DRAW_vertices.push (DRAW_alpha);
+      DRAW_vertices.push (0.0);
+      DRAW_vertices.push (0.0);
+
+      ps = s;
+      pc = c;
     }
 }
 
@@ -557,6 +618,7 @@ function SYS_Init ()
 var GFX_placeholder;
 var GAME_camera = { x: 0, y: 0, velX: 0, velY: 0 };
 var GAME_cells = new Array ();
+var GAME_baddies = new Array ();
 var GAME_autospawn = 0;
 
 var GAME_focusCell = -1;
@@ -647,6 +709,18 @@ function GAME_Draw (deltaTime)
                       30);              /* outer radius */
     }
 
+  DRAW_SetColor (1.0, 0.0, 0.3, 1.0);
+
+  for (i = 0; i < GAME_baddies.length; ++i)
+    {
+      var baddie = GAME_baddies[i];
+
+      DRAW_AddSpiky (GFX_placeholder, blobX + baddie.x, blobY + baddie.y,
+                     baddie.radius * 0.5,  /* inner radius */
+                     baddie.radius,        /* outer radius */
+                     baddie.angle);
+    }
+
   DRAW_Flush ();
 }
 
@@ -700,8 +774,8 @@ function GAME_RepelCells (deltaTime)
       forceX /= mag;
       forceY /= mag;
 
-      cellA.x += 50.0 * forceX * deltaTime;
-      cellA.y += 50.0 * forceY * deltaTime;
+      cellA.x += 200.0 * forceX * deltaTime;
+      cellA.y += 200.0 * forceY * deltaTime;
 
       result = true;
     }
@@ -720,11 +794,41 @@ function GAME_Update ()
   if (deltaTime < 0 || deltaTime > 0.033)
     deltaTime = 0.033;
 
+  /*********************************************************************/
+
   if (!GAME_RepelCells (deltaTime) && GAME_autospawn)
     {
       GAME_cells.push (GAME_GenerateCell ());
       --GAME_autospawn;
     }
+
+  /*********************************************************************/
+
+  GAME_nextBaddieSpawn -= deltaTime;
+
+  if (GAME_nextBaddieSpawn < 0.0)
+    {
+      GAME_baddies.push (GAME_GenerateBaddie ());
+      GAME_nextBaddieSpawn = 0.3;
+    }
+
+  for (i = 0; i < GAME_baddies.length; )
+    {
+      var baddie;
+
+      baddie = GAME_baddies[i];
+
+      baddie.x += baddie.velX * deltaTime;
+      baddie.y += baddie.velY * deltaTime;
+      baddie.angle += deltaTime;
+
+      if (baddie.x * baddie.x + baddie.y * baddie.y < (200 + baddie.radius) * (200 + baddie.radius))
+        GAME_baddies.splice(i, 1);
+      else
+        ++i;
+    }
+
+  /*********************************************************************/
 
   GAME_Draw (deltaTime);
 
@@ -755,6 +859,25 @@ function GAME_GenerateCell ()
   return result;
 }
 
+function GAME_GenerateBaddie ()
+{
+  var result, angle, s, c;
+
+  angle = Math.random () - 0.5 - 0.2;
+  s = Math.sin (angle);
+  c = Math.cos (angle);
+
+  result = new Object ();
+  result.velX = -c * 50;
+  result.velY = -s * 50;
+  result.x = c * 900;
+  result.y = s * 900;
+  result.radius = 30;
+  result.angle = Math.random ();
+
+  return result;
+}
+
 function GAME_Init ()
 {
   var i;
@@ -762,6 +885,7 @@ function GAME_Init ()
   SYS_Init ();
 
   GAME_autospawn = 7;
+  GAME_nextBaddieSpawn = 0.0;
 
   GAME_cells.push (GAME_GenerateCell ());
 }
