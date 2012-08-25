@@ -70,12 +70,13 @@ Game B: Blob Defense
 
     - Muzzle velocity  (consumes energy)
     - Projectile mass  (consumes mass)
-    - Aim              (consumes energy)
-    - Repair           (consumes energy and mass)
+    - Fire rate
+    - Aiming torque    (consumes energy)
+    - Repair effort    (consumes energy and mass)
     - Catabolism       (convert mass to energy)
     - Anabolism        (converts energy to mass)
-    - XXX              (store energy)
-    - YYY              (store mass)
+    - Energy storage   (store energy)
+    - Mass storage     (store mass)
 
   - Energy comes constantly from the sun
 
