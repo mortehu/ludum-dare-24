@@ -169,6 +169,7 @@ function DRAW_Flush ()
 
   switch (DRAW_blendMode)
     {
+    case -1: gl.blendFunc (gl.ONE, gl.ZERO); break;
     case 0: gl.blendFunc (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); break;
     case 1: gl.blendFunc (gl.SRC_ALPHA, gl.ONE); break;
     }
