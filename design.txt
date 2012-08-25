@@ -1,0 +1,43 @@
+Evolution:
+
+  - Population
+  - No intelligent design
+  - Changes happen randomly across generations
+  - Death from entropy is inevitable
+
+Game A: The Selfish Gene
+
+  - The core gameplay is killing off individuals with undesired attributes by
+    touching them
+
+  - Individiuals live on a circular map made entirely of a material that breaks
+    down easily into building materials and energy
+
+  - The atmosphere has two parts: oxygen, carbon
+
+  - Traits are visible:
+
+     - green: converts atmospheric C+O + H+O into O and C+H
+              grows until it dies
+              after a certain age, makes copies
+
+     - white: converts atmospheric O and C+H into C+O and H+O
+              grows until a certain age, before it starts making smaller copies
+
+  - Big problems:
+
+     - Too hard
+     - Slow pace
+     - No laser
+     - Maybe too many entities for CPU?
+
+  - Speed adjustable by means of logarithmic slider.  Helps solve problems of
+    difficulty and pace.
+
+  - Weapon of destruction should be exceedingly juicy.  Helps solve the laser problem.
+
+  - Big advantages:
+
+     - Simple controls
+     - Economy inherent
+     - Educational
