@@ -242,53 +242,91 @@ function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
   ps = 0.0;
   pc = 1.0;
 
-  for (sector = 0; sector < 40; ++sector)
-  {
-    var s, c;
+  if (innerRadius > 0)
+    {
+      /* Adjacent sectors */
 
-    s = Math.sin((sector + 1) / 40.0 * 2 * Math.PI);
-    c = Math.cos((sector + 1) / 40.0 * 2 * Math.PI);
+      for (sector = 0; sector < 60; ++sector)
+        {
+          var s, c;
 
-    DRAW_vertices.push (centerX + outerRadius * ps);
-    DRAW_vertices.push (centerY + outerRadius * pc);
-    DRAW_vertices.push (DRAW_alpha);
-    DRAW_vertices.push (0.0);
-    DRAW_vertices.push (0.0);
+          s = Math.sin((sector + 1) / 60.0 * 2 * Math.PI);
+          c = Math.cos((sector + 1) / 60.0 * 2 * Math.PI);
 
-    DRAW_vertices.push (centerX + innerRadius * ps);
-    DRAW_vertices.push (centerY + innerRadius * pc);
-    DRAW_vertices.push (DRAW_alpha);
-    DRAW_vertices.push (0.0);
-    DRAW_vertices.push (0.0);
+          DRAW_vertices.push (centerX + outerRadius * ps);
+          DRAW_vertices.push (centerY + outerRadius * pc);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
 
-    DRAW_vertices.push (centerX + innerRadius * s);
-    DRAW_vertices.push (centerY + innerRadius * c);
-    DRAW_vertices.push (DRAW_alpha);
-    DRAW_vertices.push (0.0);
-    DRAW_vertices.push (0.0);
+          DRAW_vertices.push (centerX + innerRadius * ps);
+          DRAW_vertices.push (centerY + innerRadius * pc);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
 
-    DRAW_vertices.push (centerX + outerRadius * ps);
-    DRAW_vertices.push (centerY + outerRadius * pc);
-    DRAW_vertices.push (DRAW_alpha);
-    DRAW_vertices.push (0.0);
-    DRAW_vertices.push (0.0);
+          DRAW_vertices.push (centerX + innerRadius * s);
+          DRAW_vertices.push (centerY + innerRadius * c);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
 
-    DRAW_vertices.push (centerX + innerRadius * s);
-    DRAW_vertices.push (centerY + innerRadius * c);
-    DRAW_vertices.push (DRAW_alpha);
-    DRAW_vertices.push (0.0);
-    DRAW_vertices.push (0.0);
+          DRAW_vertices.push (centerX + outerRadius * ps);
+          DRAW_vertices.push (centerY + outerRadius * pc);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
 
-    DRAW_vertices.push (centerX + outerRadius * s);
-    DRAW_vertices.push (centerY + outerRadius * c);
-    DRAW_vertices.push (DRAW_alpha);
-    DRAW_vertices.push (0.0);
-    DRAW_vertices.push (0.0);
+          DRAW_vertices.push (centerX + innerRadius * s);
+          DRAW_vertices.push (centerY + innerRadius * c);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX + outerRadius * s);
+          DRAW_vertices.push (centerY + outerRadius * c);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
 
 
-    ps = s;
-    pc = c;
-  }
+          ps = s;
+          pc = c;
+        }
+    }
+  else
+    {
+      /* Cake */
+
+      for (sector = 0; sector < 60; ++sector)
+        {
+          var s, c;
+
+          s = Math.sin((sector + 1) / 60.0 * 2 * Math.PI);
+          c = Math.cos((sector + 1) / 60.0 * 2 * Math.PI);
+
+          DRAW_vertices.push (centerX + outerRadius * ps);
+          DRAW_vertices.push (centerY + outerRadius * pc);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX);
+          DRAW_vertices.push (centerY);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX + outerRadius * s);
+          DRAW_vertices.push (centerY + outerRadius * c);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          ps = s;
+          pc = c;
+        }
+    }
 }
 
 function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
