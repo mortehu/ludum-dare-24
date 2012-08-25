@@ -73,7 +73,7 @@ Game B: Blob Defense
     - Fire rate
     - Aiming torque    (consumes energy)
     - Repair effort    (consumes energy and mass)
-    - Catabolism       (convert mass to energy)
+    - Efficiency       (use less energy for everything)
     - Anabolism        (converts energy to mass)
     - Energy storage   (store energy)
     - Mass storage     (store mass)
