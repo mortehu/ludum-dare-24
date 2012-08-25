@@ -36,7 +36,7 @@ var gl;
 
 var DRAW_vertices = new Array ();
 var DRAW_currentTexture;
-var DRAW_alpha = 1.0;
+var DRAW_red = 1.0, DRAW_green = 1.0, DRAW_blue = 1.0, DRAW_alpha = 1.0;
 var DRAW_blendMode = 0;
 
 var vertexPositionBuffer;
@@ -73,6 +73,9 @@ function DRAW_SetupShaders ()
   shaderProgram.vertexPositionAttribute = gl.getAttribLocation (shaderProgram, "attr_VertexPosition");
   gl.enableVertexAttribArray (shaderProgram.vertexPositionAttribute);
 
+  shaderProgram.colorAttribute = gl.getAttribLocation (shaderProgram, "attr_Color");
+  gl.enableVertexAttribArray (shaderProgram.colorAttribute);
+
   shaderProgram.textureCoordAttribute = gl.getAttribLocation (shaderProgram, "attr_TextureCoord");
   gl.enableVertexAttribArray (shaderProgram.textureCoordAttribute);
 
@@ -81,8 +84,9 @@ function DRAW_SetupShaders ()
   vertexPositionBuffer = gl.createBuffer ();
 
   gl.bindBuffer (gl.ARRAY_BUFFER, vertexPositionBuffer);
-  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, 20, 0);
-  gl.vertexAttribPointer (shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 20, 12);
+  gl.vertexAttribPointer (shaderProgram.vertexPositionAttribute, 2, gl.FLOAT, false, 32, 0);
+  gl.vertexAttribPointer (shaderProgram.colorAttribute, 4, gl.FLOAT, false, 32, 8);
+  gl.vertexAttribPointer (shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 32, 24);
 }
 
 function DRAW_SetBlendMode (mode)
@@ -160,7 +164,7 @@ function DRAW_Flush ()
 {
   var vertexCount;
 
-  vertexCount = DRAW_vertices.length / 5;
+  vertexCount = DRAW_vertices.length / 8;
 
   if (!vertexCount)
     return;
@@ -181,9 +185,12 @@ function DRAW_Flush ()
   gl.drawArrays (gl.TRIANGLES, 0, vertexCount);
 }
 
-function DRAW_SetAlpha (alpha)
+function DRAW_SetColor (r, g, b, a)
 {
-  DRAW_alpha = alpha;
+  DRAW_red = r;
+  DRAW_green = g;
+  DRAW_blue = b;
+  DRAW_alpha = a;
 }
 
 function DRAW_AddQuad (texture, x, y, width, height)
@@ -195,36 +202,54 @@ function DRAW_AddQuad (texture, x, y, width, height)
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (0.0);
   DRAW_vertices.push (0.0);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (0.0);
   DRAW_vertices.push (1.0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (1.0);
   DRAW_vertices.push (1.0);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (0.0);
   DRAW_vertices.push (0.0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (1.0);
   DRAW_vertices.push (1.0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (1.0);
   DRAW_vertices.push (0.0);
@@ -255,36 +280,54 @@ function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
 
           DRAW_vertices.push (centerX + outerRadius * ps);
           DRAW_vertices.push (centerY + outerRadius * pc);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
           DRAW_vertices.push (DRAW_alpha);
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
 
           DRAW_vertices.push (centerX + innerRadius * ps);
           DRAW_vertices.push (centerY + innerRadius * pc);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
           DRAW_vertices.push (DRAW_alpha);
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
 
           DRAW_vertices.push (centerX + innerRadius * s);
           DRAW_vertices.push (centerY + innerRadius * c);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
           DRAW_vertices.push (DRAW_alpha);
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
 
           DRAW_vertices.push (centerX + outerRadius * ps);
           DRAW_vertices.push (centerY + outerRadius * pc);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
           DRAW_vertices.push (DRAW_alpha);
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
 
           DRAW_vertices.push (centerX + innerRadius * s);
           DRAW_vertices.push (centerY + innerRadius * c);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
           DRAW_vertices.push (DRAW_alpha);
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
 
           DRAW_vertices.push (centerX + outerRadius * s);
           DRAW_vertices.push (centerY + outerRadius * c);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
           DRAW_vertices.push (DRAW_alpha);
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
@@ -307,18 +350,27 @@ function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
 
           DRAW_vertices.push (centerX + outerRadius * ps);
           DRAW_vertices.push (centerY + outerRadius * pc);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
           DRAW_vertices.push (DRAW_alpha);
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
 
           DRAW_vertices.push (centerX);
           DRAW_vertices.push (centerY);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
           DRAW_vertices.push (DRAW_alpha);
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
 
           DRAW_vertices.push (centerX + outerRadius * s);
           DRAW_vertices.push (centerY + outerRadius * c);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
           DRAW_vertices.push (DRAW_alpha);
           DRAW_vertices.push (0.0);
           DRAW_vertices.push (0.0);
@@ -338,36 +390,54 @@ function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (s0);
   DRAW_vertices.push (t0);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (s0);
   DRAW_vertices.push (t1);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (s1);
   DRAW_vertices.push (t1);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (s0);
   DRAW_vertices.push (t0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (s1);
   DRAW_vertices.push (t1);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (s1);
   DRAW_vertices.push (t0);
@@ -536,7 +606,7 @@ function GAME_Draw (deltaTime)
   gl.uniform4f (gl.getUniformLocation (shaderProgram, "uniform_Camera"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight, GAME_camera.x, GAME_camera.y);
 
   DRAW_SetBlendMode (-1);
-  DRAW_SetAlpha (1.0);
+  DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
 
   blobX = 200 + 10;
   blobY = gl.viewportHeight - 200 - 10;
