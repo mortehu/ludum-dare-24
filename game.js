@@ -150,7 +150,7 @@ function DRAW_LoadTexture (url)
 function DRAW_HandleLoadedTexture (texture)
 {
   gl.bindTexture (gl.TEXTURE_2D, texture);
-  gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
   gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -196,37 +196,98 @@ function DRAW_AddQuad (texture, x, y, width, height)
   DRAW_vertices.push (y);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (0.0);
-  DRAW_vertices.push (1.0);
+  DRAW_vertices.push (0.0);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y + height);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (0.0);
-  DRAW_vertices.push (0.0);
+  DRAW_vertices.push (1.0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (1.0);
-  DRAW_vertices.push (0.0);
+  DRAW_vertices.push (1.0);
 
   DRAW_vertices.push (x);
   DRAW_vertices.push (y);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (0.0);
-  DRAW_vertices.push (1.0);
+  DRAW_vertices.push (0.0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y + height);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (1.0);
-  DRAW_vertices.push (0.0);
+  DRAW_vertices.push (1.0);
 
   DRAW_vertices.push (x + width);
   DRAW_vertices.push (y);
   DRAW_vertices.push (DRAW_alpha);
   DRAW_vertices.push (1.0);
-  DRAW_vertices.push (1.0);
+  DRAW_vertices.push (0.0);
+}
+
+function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
+{
+  var sector, ps, pc;
+
+  if (texture != DRAW_currentTexture)
+    DRAW_Flush ();
+
+  DRAW_currentTexture = texture;
+
+  ps = 0.0;
+  pc = 1.0;
+
+  for (sector = 0; sector < 40; ++sector)
+  {
+    var s, c;
+
+    s = Math.sin((sector + 1) / 40.0 * 2 * Math.PI);
+    c = Math.cos((sector + 1) / 40.0 * 2 * Math.PI);
+
+    DRAW_vertices.push (centerX + outerRadius * ps);
+    DRAW_vertices.push (centerY + outerRadius * pc);
+    DRAW_vertices.push (DRAW_alpha);
+    DRAW_vertices.push (0.0);
+    DRAW_vertices.push (0.0);
+
+    DRAW_vertices.push (centerX + innerRadius * ps);
+    DRAW_vertices.push (centerY + innerRadius * pc);
+    DRAW_vertices.push (DRAW_alpha);
+    DRAW_vertices.push (0.0);
+    DRAW_vertices.push (0.0);
+
+    DRAW_vertices.push (centerX + innerRadius * s);
+    DRAW_vertices.push (centerY + innerRadius * c);
+    DRAW_vertices.push (DRAW_alpha);
+    DRAW_vertices.push (0.0);
+    DRAW_vertices.push (0.0);
+
+    DRAW_vertices.push (centerX + outerRadius * ps);
+    DRAW_vertices.push (centerY + outerRadius * pc);
+    DRAW_vertices.push (DRAW_alpha);
+    DRAW_vertices.push (0.0);
+    DRAW_vertices.push (0.0);
+
+    DRAW_vertices.push (centerX + innerRadius * s);
+    DRAW_vertices.push (centerY + innerRadius * c);
+    DRAW_vertices.push (DRAW_alpha);
+    DRAW_vertices.push (0.0);
+    DRAW_vertices.push (0.0);
+
+    DRAW_vertices.push (centerX + outerRadius * s);
+    DRAW_vertices.push (centerY + outerRadius * c);
+    DRAW_vertices.push (DRAW_alpha);
+    DRAW_vertices.push (0.0);
+    DRAW_vertices.push (0.0);
+
+
+    ps = s;
+    pc = c;
+  }
 }
 
 function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
@@ -374,8 +435,9 @@ function SYS_Init ()
 
   SYS_SetupGL ();
 
-  document.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
-  document.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
+  /* XXX: change to document.onkey* */
+  canvas.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
+  canvas.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
   canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); return false; }
   document.onmousedown = function () { GAME_ButtonPressed (); return false; }
   canvas.onselectstart = function () { return false; }
@@ -384,11 +446,9 @@ function SYS_Init ()
 /***********************************************************************/
 
 var GFX_placeholder;
-var GAME_camera = { x: -100, y: -300, velX: 0, velY: 0 };
+var GAME_camera = { x: 0, y: 0, velX: 0, velY: 0 };
 
 var GAME_cameraMovingRight = true;
-var GAME_cameraTargetRight = { x: 0, y: 0 };
-var GAME_cameraTargetLeft = { x: -744, y: -410 };
 
 function GAME_KeyPressed(e)
 {
@@ -437,6 +497,8 @@ function GAME_Draw (deltaTime)
 
   DRAW_AddQuad (GFX_placeholder, 0, 0, 256, 256);
   DRAW_Flush ();
+
+  DRAW_AddCircle (GFX_placeholder, 300, 300, 50, 60);
 }
 
 function GAME_Update ()
@@ -449,20 +511,6 @@ function GAME_Update ()
 
   if (deltaTime < 0 || deltaTime > 0.033)
     deltaTime = 0.033;
-
-  GAME_cameraTargetRight = { x: 0, y: 0 };
-  GAME_cameraTargetLeft = { x: -(gl.viewportWidth - 256), y: -(gl.viewportHeight - 256) };
-
-  if (GAME_cameraMovingRight)
-    {
-      if (VEC_CruiseTo (GAME_camera, GAME_cameraTargetRight, 500, 1000, deltaTime))
-       GAME_cameraMovingRight = false;
-    }
-  else
-    {
-      if (VEC_CruiseTo (GAME_camera, GAME_cameraTargetLeft, 500, 1000, deltaTime))
-       GAME_cameraMovingRight = true;
-    }
 
   GAME_Draw (deltaTime);
 
