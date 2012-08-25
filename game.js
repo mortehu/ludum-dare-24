@@ -932,7 +932,7 @@ function GAME_Update ()
   for (i = 0; i < GAME_cells.length; ++i)
     {
       var cell, amount;
-      
+
       cell = GAME_cells[i];
 
       amount = 10 * (cell.anabolism * 1.2 - cell.catabolism) * deltaTime;
