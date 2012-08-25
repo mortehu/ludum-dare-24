@@ -559,7 +559,7 @@ var GAME_camera = { x: 0, y: 0, velX: 0, velY: 0 };
 var GAME_cells = new Array ();
 var GAME_autospawn = 0;
 
-var GAME_cameraMovingRight = true;
+var GAME_focusCell = -1;
 
 function GAME_KeyPressed(e)
 {
@@ -611,19 +611,38 @@ function GAME_Draw (deltaTime)
   blobX = 200 + 10;
   blobY = gl.viewportHeight - 200 - 10;
 
-  DRAW_AddCircle (GFX_placeholder,  /* texture */
-                  blobX,            /* X */
-                  blobY,            /* Y */
+  DRAW_AddCircle (GFX_placeholder, blobX, blobY,
                   200 - 10,         /* inner radius */
                   200);             /* outer radius */
+
+  GAME_focusCell = -1;
 
   for (i = 0; i < GAME_cells.length; ++i)
     {
       var cell = GAME_cells[i];
+      var x, y;
 
-      DRAW_AddCircle (GFX_placeholder,  /* texture */
-                      cell.x + blobX,   /* X */
-                      cell.y + blobY,   /* Y */
+      x = cell.x + blobX;
+      y = cell.y + blobY;
+
+      DRAW_SetColor (0.5, 0.8, 0.5, 1.0);
+
+      if (GAME_focusCell == -1)
+        {
+          var dx, dy;
+
+          dx = x - SYS_mouseX;
+          dy = y - SYS_mouseY;
+
+          if (dx * dx + dy * dy < 30 * 30)
+            {
+              GAME_focusCell = i;
+
+              DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
+            }
+        }
+
+      DRAW_AddCircle (GFX_placeholder, x, y,
                       0.0,              /* inner radius */
                       30);              /* outer radius */
     }
