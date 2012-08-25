@@ -611,8 +611,9 @@ function SYS_Init ()
   canvas.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
   canvas.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
   canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); return false; }
-  document.onmousedown = function () { GAME_ButtonPressed (); return false; }
+  document.onmousedown = function () { GAME_ButtonPressed (event); return false; }
   canvas.onselectstart = function () { return false; }
+  canvas.oncontextmenu = function () { return false; }
 }
 
 /***********************************************************************/
@@ -625,7 +626,9 @@ var GAME_cellTraits = ['muzzleVelocity', 'projectileMass', 'fireRate', 'aim', 'r
 var GAME_camera = { x: 0, y: 0, velX: 0, velY: 0 };
 var GAME_cells = new Array ();
 var GAME_baddies = new Array ();
-var GAME_autospawn = 0;
+var GAME_projectiles = new Array ();
+var GAME_energy = 100.0, GAME_energyStorage = 200.0;
+var GAME_mass = 100.0, GAME_massStorage = 200.0;
 
 var GAME_focusCell = -1;
 
@@ -661,8 +664,31 @@ function GAME_MouseMoved (ev, el)
   SYS_mouseY = ev.pageY - el.offsetTop;
 }
 
-function GAME_ButtonPressed ()
+function GAME_ButtonPressed (ev)
 {
+  switch (ev.button)
+    {
+    case 0:
+
+      if (GAME_focusCell >= 0 && GAME_mass > 20 && GAME_energy > 10)
+        {
+          GAME_energy -= 10;
+          GAME_mass -= 20;
+          GAME_cells.push (GAME_SplitCell (GAME_cells[GAME_focusCell]));
+        }
+
+      break;
+
+    case 2:
+
+      if (GAME_focusCell >= 0)
+        {
+          GAME_cells.splice (GAME_focusCell, 1);
+          GAME_focusCell = -1;
+        }
+
+      break;
+    }
 }
 
 function GAME_Draw (deltaTime)
@@ -723,9 +749,18 @@ function GAME_Draw (deltaTime)
       var baddie = GAME_baddies[i];
 
       DRAW_AddSpiky (GFX_solid, blobX + baddie.x, blobY + baddie.y,
-                     baddie.radius * 0.5,  /* inner radius */
-                     baddie.radius,        /* outer radius */
+                     baddie.health * 0.5,  /* inner radius */
+                     baddie.health,        /* outer radius */
                      baddie.angle);
+    }
+
+  DRAW_SetColor (1.0, 1.0, 0.0, 1.0);
+
+  for (i = 0; i < GAME_projectiles.length; ++i)
+    {
+      var projectile = GAME_projectiles[i];
+
+      DRAW_AddCircle (GFX_solid, blobX + projectile.x, blobY + projectile.y, 0, 5);
     }
 
   if (GAME_focusCell >= 0)
@@ -733,11 +768,21 @@ function GAME_Draw (deltaTime)
       DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
 
       for (i = 0; i < GAME_cellTraits.length; ++i)
-        DRAW_AddQuad (GFX_solid, 180, 14 + i * 20, 30 * GAME_cells[GAME_focusCell][GAME_cellTraits[i]], 10);
+        DRAW_AddQuad (GFX_solid, 180, 14 + i * 20, 50 * GAME_cells[GAME_focusCell][GAME_cellTraits[i]], 10);
 
       DRAW_SetBlendMode (0);
       DRAW_AddQuad (GFX_traitLegend, 0, 0, 256, 256);
     }
+  else
+    DRAW_SetBlendMode (0);
+
+  DRAW_SetColor (0.95, 0.64, 0.19, 0.8);
+  i = GAME_energy / GAME_energyStorage * 200;
+  DRAW_AddQuad (GFX_solid, gl.viewportWidth - 20, gl.viewportHeight - i - 10 , 10, i);
+
+  DRAW_SetColor (0.70, 0.44, 0.09, 0.8);
+  i = GAME_mass / GAME_massStorage * 200;
+  DRAW_AddQuad (GFX_solid, gl.viewportWidth - 40, gl.viewportHeight - i - 10 , 10, i);
 
   DRAW_Flush ();
 }
@@ -750,8 +795,8 @@ function GAME_RepelCells (deltaTime)
 
   for (i = 0; i < GAME_cells.length; ++i)
     {
-      var forceX = 0.0, forceY = 0.0, mag;
-      var cellA;
+      var forceX = 0, forceY = 0, mag;
+      var cellA, newX, newY;
 
       cellA = GAME_cells[i];
 
@@ -789,21 +834,89 @@ function GAME_RepelCells (deltaTime)
         continue;
 
       mag = Math.sqrt (forceX * forceX + forceY * forceY);
-      forceX /= mag;
-      forceY /= mag;
 
-      cellA.x += 200.0 * forceX * deltaTime;
-      cellA.y += 200.0 * forceY * deltaTime;
+      if (mag > 1)
+        {
+          forceX /= mag;
+          forceY /= mag;
+        }
 
+      newX = cellA.x + 50.0 * forceX * deltaTime;
+      newY = cellA.y + 50.0 * forceY * deltaTime;
+
+      if (newX * newX + newY * newY > (190 - 30) * (190 - 30))
+        {
+        }
+      else
+        {
+          cellA.x = newX;
+          cellA.y = newY;
+        }
       result = true;
     }
 
   return result;
 }
 
+function GAME_ShootAtBaddies (deltaTime)
+{
+  var i, j;
+
+  if (!GAME_baddies.length)
+    return;
+
+  for (i = 0; i < GAME_cells.length; ++i)
+    {
+      var cell, nearestBaddie = -1, nearestBaddieDistance = 0;
+      var dx, dy, mag, projectile;
+
+      cell = GAME_cells[i];
+
+      cell.nextBullet -= deltaTime;
+
+      if (cell.nextBullet > 0)
+        continue;
+
+      if (cell.projectileMass * 5.0 > GAME_mass)
+        continue;
+
+      for (j = 0; j < GAME_baddies.length; ++j)
+        {
+          var baddie;
+
+          baddie = GAME_baddies[j];
+
+          dx = baddie.x - cell.x;
+          dy = baddie.y - cell.y;
+          mag = dx * dx + dy * dy;
+
+          if (nearestBaddie == -1 || mag < nearestBaddieDistance)
+            {
+              nearestBaddie = j;
+              nearestBaddieDistance = mag;
+            }
+        }
+
+      dx = GAME_baddies[nearestBaddie].x - cell.x;
+      dy = GAME_baddies[nearestBaddie].y - cell.y;
+      mag = Math.sqrt (nearestBaddieDistance);
+
+      projectile = new Object ();
+      projectile.x = cell.x;
+      projectile.y = cell.y;
+      projectile.velX = 150 * dx / mag;
+      projectile.velY = 150 * dy / mag;
+      GAME_projectiles.push (projectile);
+
+      GAME_mass -= cell.projectileMass * 5.0;
+
+      cell.nextBullet = 3.0;
+    }
+}
+
 function GAME_Update ()
 {
-  var timeNow, deltaTime;
+  var i, timeNow, deltaTime;
 
   timeNow = new Date ().getTime ();
   deltaTime = (timeNow - lastTime) * 0.001;
@@ -814,11 +927,37 @@ function GAME_Update ()
 
   /*********************************************************************/
 
-  if (!GAME_RepelCells (deltaTime) && GAME_autospawn)
+  GAME_energy += 1.0; /* Solar energy */
+
+  for (i = 0; i < GAME_cells.length; ++i)
     {
-      GAME_cells.push (GAME_GenerateCell ());
-      --GAME_autospawn;
+      var cell, amount;
+      
+      cell = GAME_cells[i];
+
+      amount = 10 * (cell.anabolism * 1.2 - cell.catabolism) * deltaTime;
+
+      if (amount > GAME_energy)
+        amount = GAME_energy;
+
+      if (-amount > GAME_mass)
+        amount = -GAME_mass;
+
+      GAME_energy -= amount;
+      GAME_mass += amount;
     }
+
+  if (GAME_energy > GAME_energyStorage)
+    GAME_energy = GAME_energyStorage;
+
+  if (GAME_mass > GAME_massStorage)
+    GAME_mass = GAME_massStorage;
+
+  /*********************************************************************/
+
+  GAME_ShootAtBaddies (deltaTime);
+
+  GAME_RepelCells (deltaTime);
 
   /*********************************************************************/
 
@@ -827,7 +966,7 @@ function GAME_Update ()
   if (GAME_nextBaddieSpawn < 0.0)
     {
       GAME_baddies.push (GAME_GenerateBaddie ());
-      GAME_nextBaddieSpawn = 0.3;
+      GAME_nextBaddieSpawn = 6.0;
     }
 
   for (i = 0; i < GAME_baddies.length; )
@@ -840,8 +979,24 @@ function GAME_Update ()
       baddie.y += baddie.velY * deltaTime;
       baddie.angle += deltaTime;
 
-      if (baddie.x * baddie.x + baddie.y * baddie.y < (200 + baddie.radius) * (200 + baddie.radius))
+      if (baddie.x * baddie.x + baddie.y * baddie.y < (200 + baddie.health) * (200 + baddie.health))
         GAME_baddies.splice(i, 1);
+      else
+        ++i;
+    }
+
+  /*********************************************************************/
+
+  for (i = 0; i < GAME_projectiles.length; )
+    {
+      var projectile = GAME_projectiles[i];
+
+      projectile.x += projectile.velX * deltaTime;
+      projectile.y += projectile.velY * deltaTime;
+
+      if (projectile.x > 900 || projectile.y > 900
+          || projectile.x < -900 || projectile.y < -900)
+        GAME_projectiles.splice(i, 1);
       else
         ++i;
     }
@@ -869,12 +1024,41 @@ function GAME_GenerateCell ()
   result.fireRate = 1.2;
   result.aim = 1.3;
   result.repair = 1.5;
-  result.catabolism = 1.4;
-  result.anabolism = 1.7;
+  result.catabolism = 1.0;
+  result.anabolism = 1.0;
   result.energyStorage = 1.1;
   result.massStorage = 1.2;
+  result.nextBullet = 0.0;
   result.x = 0;
   result.y = 0;
+
+  return result;
+}
+
+function GAME_RandomScale ()
+{
+  /* Positive number, equal chance of 0.5 and 2.0 */
+
+  return Math.pow (2, 0.1 * Math.sqrt (-2 * Math.log (Math.random ())) * Math.cos (2 * Math.PI * Math.random ()));
+}
+
+function GAME_SplitCell (cell)
+{
+  var result;
+
+  result = new Object ();
+  result.muzzleVelocity = cell.muzzleVelocity * GAME_RandomScale ();
+  result.projectileMass = cell.projectileMass * GAME_RandomScale ();
+  result.fireRate = cell.fireRate * GAME_RandomScale ();
+  result.aim = cell.aim * GAME_RandomScale ();
+  result.repair = cell.repair * GAME_RandomScale ();
+  result.catabolism = cell.catabolism * GAME_RandomScale ();
+  result.anabolism = cell.anabolism * GAME_RandomScale ();
+  result.energyStorage = cell.energyStorage * GAME_RandomScale ();
+  result.massStorage = cell.massStorage * GAME_RandomScale ();
+  result.nextBullet = cell.nextBullet + 0.5;
+  result.x = cell.x;
+  result.y = cell.y;
 
   return result;
 }
@@ -883,7 +1067,7 @@ function GAME_GenerateBaddie ()
 {
   var result, angle, s, c;
 
-  angle = Math.random () - 0.5 - 0.2;
+  angle = Math.random () * 1.5 - 1.2;
   s = Math.sin (angle);
   c = Math.cos (angle);
 
@@ -892,8 +1076,8 @@ function GAME_GenerateBaddie ()
   result.velY = -s * 50;
   result.x = c * 900;
   result.y = s * 900;
-  result.radius = 30;
   result.angle = Math.random ();
+  result.health = 30;
 
   return result;
 }
@@ -904,7 +1088,6 @@ function GAME_Init ()
 
   SYS_Init ();
 
-  GAME_autospawn = 7;
   GAME_nextBaddieSpawn = 0.0;
 
   GAME_cells.push (GAME_GenerateCell ());
