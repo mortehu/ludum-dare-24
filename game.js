@@ -843,6 +843,8 @@ function GAME_ButtonPressed (ev)
         {
           GAME_mass -= GAME_CELL_COST;
           GAME_cells.push (GAME_SplitCell (GAME_cells[GAME_focusCell]));
+
+          GAME_CompleteMission (0);
         }
 
       break;
@@ -857,8 +859,7 @@ function GAME_ButtonPressed (ev)
           GAME_focusCell = -1;
           GAME_mass += 15;
 
-          for (i = 0; i < GAME_cells.length; ++i)
-            GAME_cells[i].drama = 2.0;
+          GAME_CompleteMission (1);
         }
 
       break;
@@ -867,7 +868,7 @@ function GAME_ButtonPressed (ev)
 
 function GAME_Draw (deltaTime)
 {
-  var blobX, blobY, i, focusSetThisFrame = false;
+  var blobX, blobY, i, j, focusSetThisFrame = false;
 
   DRAW_UpdateViewport ();
 
@@ -1040,6 +1041,55 @@ function GAME_Draw (deltaTime)
 
   if (GAME_focusCell >= 0)
     {
+      if (GAME_cells.length > 1)
+        {
+          var traitsMax, traitsMin;
+
+          traitsMax = new Array();
+          traitsMin = new Array();
+
+          for (i = 0; i < GAME_cellTraits.length; ++i)
+            {
+              traitsMin.push (GAME_cells[0][GAME_cellTraits[i]]);
+              traitsMax.push (GAME_cells[0][GAME_cellTraits[i]]);
+            }
+
+          for (j = 1; j < GAME_cells.length; ++j)
+            {
+              var cell;
+
+              cell = GAME_cells[j];
+
+              for (i = 0; i < GAME_cellTraits.length; ++i)
+                {
+                  if (cell[GAME_cellTraits[i]] > traitsMax[i])
+                    traitsMax[i] = cell[GAME_cellTraits[i]];
+
+                  if (cell[GAME_cellTraits[i]] < traitsMin[i])
+                    traitsMin[i] = cell[GAME_cellTraits[i]];
+                }
+            }
+
+          DRAW_SetColor (1.0, 0.0, 0.3, 1.0);
+
+          for (i = 0; i < GAME_cellTraits.length; ++i)
+            {
+              var x0, x1;
+
+              x0 = 3 + Math.log (100 * traitsMin[i]) / Math.log(10) * 30;
+
+              if (x0 < 1)
+                x0 = 1;
+
+              x1 = 3 + Math.log (100 * traitsMax[i]) / Math.log(10) * 30;
+
+              if (x1 < 1)
+                x1 = 1;
+
+              DRAW_AddQuad (GFX_solid, 189 + x0, 12 + i * 23, (x1 - x0) + 1, 10);
+            }
+        }
+
       DRAW_SetColor (0.05, 0.2, 0.25, 1.0);
 
       for (i = 0; i < GAME_cellTraits.length; ++i)
@@ -1054,6 +1104,7 @@ function GAME_Draw (deltaTime)
           DRAW_AddQuad (GFX_solid, 190, 12 + i * 23, width, 10);
         }
 
+      DRAW_SetColor (0.0, 0.0, 0.0, 1.0);
       DRAW_SetBlendMode (0);
       DRAW_AddQuad (GFX_traitLegend, 4, 10, 512, 128);
     }
@@ -1207,6 +1258,14 @@ function GAME_RepelCells (deltaTime)
     }
 
   return result;
+}
+
+function GAME_CompleteMission (nr)
+{
+  if (GAME_mission != nr)
+    return;
+
+  ++GAME_mission;
 }
 
 function GAME_RequireEnergy (amount)
@@ -1406,7 +1465,6 @@ function GAME_Update ()
           GAME_shake = 0.5;
 
           GAME_baddies.splice(i, 1);
-          ++GAME_mission;
 
           for (j = 0; j < GAME_cells.length; ++j)
             {
