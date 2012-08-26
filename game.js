@@ -1119,25 +1119,25 @@ function GAME_Draw (deltaTime)
     DRAW_SetBlendMode (0);
 
   DRAW_SetColor (0.05, 0.2, 0.25, 1.0);
-  DRAW_AddQuad (GFX_statLegend, 8, gl.viewportHeight - 61, 16, 64);
+  DRAW_AddQuad (GFX_statLegend, 8, gl.viewportHeight - 61, 128, 64);
 
   DRAW_SetColor (0.00, 0.00, 0.00, 0.5);
-  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 60, 400, 10);
+  DRAW_AddQuad (GFX_solid, 85, gl.viewportHeight - 60, 360, 10);
   DRAW_SetColor (1.00, 1.00, 1.00, 0.9);
-  i = GAME_health / GAME_healthMax * 400;
-  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 60, i, 10);
+  i = GAME_health / GAME_healthMax * 360;
+  DRAW_AddQuad (GFX_solid, 85, gl.viewportHeight - 60, i, 10);
 
   DRAW_SetColor (0.00, 0.00, 0.00, 0.5);
-  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 40, 400, 10);
+  DRAW_AddQuad (GFX_solid, 85, gl.viewportHeight - 40, 360, 10);
   DRAW_SetColor (0.70, 0.44, 0.09, 0.9);
-  i = GAME_energy / GAME_energyStorage * 400;
-  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 40, i, 10);
+  i = GAME_energy / GAME_energyStorage * 360;
+  DRAW_AddQuad (GFX_solid, 85, gl.viewportHeight - 40, i, 10);
 
   DRAW_SetColor (0.00, 0.00, 0.00, 0.5);
-  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 20, 400, 10);
+  DRAW_AddQuad (GFX_solid, 85, gl.viewportHeight - 20, 360, 10);
   DRAW_SetColor (0.95, 0.64, 0.19, 0.9);
-  i = GAME_mass / GAME_massStorage * 400;
-  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 20, i, 10);
+  i = GAME_mass / GAME_massStorage * 360;
+  DRAW_AddQuad (GFX_solid, 85, gl.viewportHeight - 20, i, 10);
 
   if (GAME_camera.y < 0)
     {
@@ -1278,6 +1278,11 @@ function GAME_CompleteMission (nr)
   GAME_scoreAnimAmount = (nr < 2) ? 500 : 10000;
 
   GAME_score += 10000;
+
+  GAME_baddies = new Array ();
+
+  if (GAME_bestScore < 90000)
+    GAME_nextBaddieSpawn = 6;
 }
 
 function GAME_RequireEnergy (amount)
