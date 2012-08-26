@@ -647,7 +647,7 @@ function VEC_CruiseTo (position, target, maxAcceleration, maxVelocity, deltaTime
     deltaVelocity = 0.0;
 
   /* Can we reach the target velocity in less than `deltaTime' seconds? */
-  if (deltaVelocity < maxAcceleration * deltaTime)
+  if (deltaVelocity <= maxAcceleration * deltaTime)
     {
       position.velX = targetVelocityX;
       position.velY = targetVelocityY;
