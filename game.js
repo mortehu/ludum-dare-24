@@ -778,7 +778,7 @@ var GAME_health, GAME_healthMax;
 var GAME_score;
 var GAME_mission, GAME_missionScroll;
 var GAME_difficulty;
-var GAME_bestScore = 0;
+var GAME_bestScore;
 
 var GAME_focusCell;
 var GAME_cursorBlink;
@@ -1146,23 +1146,23 @@ function GAME_Draw (deltaTime)
       yOffset = -gl.viewportHeight + 250;
 
       DRAW_AddQuadST (GFX_score,
-                      (gl.viewportWidth - 241) * 0.5, yOffset,
+                      (gl.viewportWidth - 261) * 0.5, yOffset,
                       261, 38,
                       0.0, 0.0,
                       261.0 / 512.0, 38.0 / 256.0);
       yOffset += 50;
 
-      DRAW_AddNumber (Math.floor (GAME_score), gl.viewportWidth * 0.5, yOffset, 0.5);
+      DRAW_AddNumber (Math.floor (GAME_score), gl.viewportWidth * 0.5 - 14, yOffset, 0.5);
       yOffset += 80;
 
       DRAW_AddQuadST (GFX_score,
-                      (gl.viewportWidth - 315) * 0.5, yOffset,
-                      313, 52,
+                      (gl.viewportWidth - 265) * 0.5, yOffset,
+                      265, 52,
                       0.0, 69.0 / 256.0,
-                      313.0 / 512.0, 121.0 / 256.0);
+                      265.0 / 512.0, 121.0 / 256.0);
       yOffset += 60;
 
-      DRAW_AddNumber (Math.floor (GAME_bestScore), gl.viewportWidth * 0.5, yOffset, 0.5);
+      DRAW_AddNumber (Math.floor (GAME_bestScore), gl.viewportWidth * 0.5 - 14, yOffset, 0.5);
     }
 
   VEC_CruiseTo (GAME_missionScroll, { x: 0, y: GAME_mission }, 1.0, 1.0, deltaTime);
@@ -1334,10 +1334,10 @@ function GAME_ShootAtBaddies (deltaTime)
       if (GAME_mass - GAME_PROJECTILE_MASS <= GAME_CELL_COST)
         continue;
 
-      if (GAME_energy - GAME_CELL_ENERGY_COST <= 10.0 / cell.efficiency)
+      if (GAME_PROJECTILE_MASS > GAME_mass)
         continue;
 
-      if (GAME_PROJECTILE_MASS > GAME_mass)
+      if (GAME_energy - 1.5 * GAME_CELL_ENERGY_COST <= 10.0 / cell.efficiency)
         continue;
 
       if (!GAME_RequireEnergy (10.0 / cell.efficiency))
@@ -1422,10 +1422,10 @@ function GAME_Update ()
           GAME_mass += amount;
           GAME_energy -= amount / cell.efficiency;
           GAME_healthMax += cell.shield;
-        }
 
-      if (!GAME_RequireEnergy (GAME_cells.length * deltaTime * GAME_ENERGY_CELL_UPKEEP / cell.efficiency))
-        GAME_energy = 0;
+          if (!GAME_RequireEnergy (deltaTime * GAME_ENERGY_CELL_UPKEEP / cell.efficiency))
+            GAME_energy = 0;
+        }
 
       if (GAME_energy > GAME_energyStorage)
         GAME_energy = GAME_energyStorage;
@@ -1567,6 +1567,8 @@ function GAME_Update ()
     {
       GAME_over = true;
       GAME_health = 0;
+
+      localStorage['GAME_bestScore'] = GAME_bestScore;
     }
 
   GAME_difficulty += deltaTime;
@@ -1730,6 +1732,9 @@ function GAME_Reset ()
 function GAME_Init ()
 {
   var i;
+
+  if (undefined === (GAME_bestScore = localStorage['GAME_bestScore']))
+    GAME_bestScore = 0;
 
   SYS_Init ();
 
