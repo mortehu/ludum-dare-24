@@ -32,6 +32,7 @@ soundManager.onerror = function()
 
 /***********************************************************************/
 
+var GAME_CELL_COST = 20.0;
 var GAME_CELL_BLINK_MIN = 5.0;
 var GAME_CELL_BLINK_EXTRA = 4.0;
 var GAME_BADDIE_DAMAGE = 15.0;
@@ -44,7 +45,9 @@ var GAME_ENERGY_SOLAR_INPUT = 10.0;
 var GAME_ENERGY_STORAGE_BASE = 200.0;
 var GAME_HEALTH_REGENERATION = 1.0;
 var GAME_MASS_STORAGE_BASE = 200.0;
-var GAME_PROJECTILE_MASS_MULTIPLIER = 4.0;
+var GAME_PROJECTILE_MASS = 10.0;
+var GAME_PROJECTILE_DAMAGE = 40.0;
+var GAME_SCORE_DAMAGE = 3.0;
 
 /***********************************************************************/
 
@@ -600,6 +603,35 @@ function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
   DRAW_vertices.push (t0);
 }
 
+function DRAW_AddNumber (number, x, y)
+{
+  var result;
+
+  if (number)
+    x += Math.floor (Math.log(number) / Math.log(10)) * 29 * 0.5;
+
+  result = x + 29;
+
+  do
+    {
+      var digit;
+      var s0;
+
+      digit = number % 10;
+
+      DRAW_AddQuadST (GFX_score, x, y,
+                      29, 38,
+                      (digit * 29.0 - 1) / 512.0, 144 / 256.0,
+                      ((digit + 1) * 29.0 - 1) / 512.0, 182.0 / 256.0);
+
+      x -= 29;
+      number = Math.floor (number / 10);
+    }
+  while (number > 0);
+
+  return result;
+}
+
 /***********************************************************************/
 
 function VEC_CruiseTo (position, target, maxAcceleration, maxVelocity, deltaTime)
@@ -710,8 +742,8 @@ function SYS_Init ()
   SYS_SetupGL ();
 
   /* XXX: change to document.onkey* */
-  document.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
-  document.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
+  document.onkeydown = function (event) { GAME_KeyPressed (event); };
+  document.onkeyup = function (event) { GAME_KeyRelease (event); };
   canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); return false; }
   document.onmousedown = function () { GAME_ButtonPressed (event); return false; }
   canvas.onselectstart = function () { return false; }
@@ -724,6 +756,7 @@ var GFX_solid;
 var GFX_traitLegend;
 var GFX_statLegend;
 var GFX_score;
+var GFX_missions;
 
 var GAME_cellTraits = ['fireRate', 'efficiency', 'anabolism', 'shield'];
 
@@ -734,20 +767,24 @@ var GAME_cellColors =
 ];
 
 var GAME_camera = { x: 0, y: 0, velX: 0, velY: 0 };
-var GAME_cells = new Array ();
-var GAME_baddies = new Array ();
-var GAME_projectiles = new Array ();
-var GAME_health = 100.0;
-var GAME_over = false;
-var GAME_energy = 100.0, GAME_energyStorage = 200.0;
-var GAME_mass = 100.0, GAME_massStorage = 200.0;
-var GAME_difficulty = 0.0;
+var GAME_cells;
+var GAME_baddies;
+var GAME_projectiles;
+var GAME_over;
+var GAME_energy, GAME_energyStorage;
+var GAME_mass, GAME_massStorage;
+var GAME_health;
+var GAME_score;
+var GAME_mission, GAME_missionScroll;
+var GAME_difficulty;
+var GAME_bestScore = 0;
 
-var GAME_focusCell = -1;
-var GAME_cursorBlink = 0;
-var GAME_shake = 0;
+var GAME_focusCell;
+var GAME_cursorBlink;
+var GAME_shake;
 
-var GAME_nextCellColor = 0;
+var GAME_nextCellColor;
+var GAME_nextBaddieSpawn;
 
 function GAME_KeyPressed(e)
 {
@@ -802,9 +839,9 @@ function GAME_ButtonPressed (ev)
           break;
         }
 
-      if (GAME_focusCell >= 0 && GAME_mass > 20 && GAME_cells.length < 13 && GAME_RequireEnergy (10))
+      if (GAME_focusCell >= 0 && GAME_mass > GAME_CELL_COST && GAME_cells.length < 13 && GAME_RequireEnergy (10))
         {
-          GAME_mass -= 20;
+          GAME_mass -= GAME_CELL_COST;
           GAME_cells.push (GAME_SplitCell (GAME_cells[GAME_focusCell]));
         }
 
@@ -818,6 +855,7 @@ function GAME_ButtonPressed (ev)
 
           GAME_cells.splice (GAME_focusCell, 1);
           GAME_focusCell = -1;
+          GAME_mass += 15;
 
           for (i = 0; i < GAME_cells.length; ++i)
             GAME_cells[i].drama = 2.0;
@@ -846,7 +884,7 @@ function GAME_Draw (deltaTime)
     {
       var projectile = GAME_projectiles[i];
 
-      DRAW_AddCircle (GFX_solid, blobX + projectile.x, blobY + projectile.y, 0, projectile.mass);
+      DRAW_AddCircle (GFX_solid, blobX + projectile.x, blobY + projectile.y, 0, projectile.radius);
     }
 
   DRAW_SetColor (0.1, 0.4, 0.5, 1.0);
@@ -1040,13 +1078,42 @@ function GAME_Draw (deltaTime)
   DRAW_SetColor (0.00, 0.00, 0.00, 0.5);
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 20, 400, 10);
   DRAW_SetColor (0.95, 0.64, 0.19, 0.9);
-  i = GAME_mass / GAME_massStorage * 200;
+  i = GAME_mass / GAME_massStorage * 400;
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 20, i, 10);
 
   if (GAME_camera.y < 0)
     {
-      DRAW_AddQuad (GFX_score, 0, -gl.viewportHeight, 512, 256);
+      var yOffset;
+
+      yOffset = -gl.viewportHeight + 250;
+
+      DRAW_AddQuadST (GFX_score,
+                      (gl.viewportWidth - 241) * 0.5, yOffset,
+                      261, 38,
+                      0.0, 0.0,
+                      261.0 / 512.0, 38.0 / 256.0);
+      yOffset += 50;
+
+      DRAW_AddNumber (Math.floor (GAME_score), gl.viewportWidth * 0.5, yOffset);
+      yOffset += 80;
+
+      DRAW_AddQuadST (GFX_score,
+                      (gl.viewportWidth - 315) * 0.5, yOffset,
+                      313, 52,
+                      0.0, 69.0 / 256.0,
+                      313.0 / 512.0, 121.0 / 256.0);
+      yOffset += 60;
+
+      DRAW_AddNumber (Math.floor (GAME_bestScore), gl.viewportWidth * 0.5, yOffset);
     }
+
+  VEC_CruiseTo (GAME_missionScroll, { x: 0, y: GAME_mission }, 1.0, 1.0, deltaTime);
+
+  DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
+  DRAW_AddQuadST (GFX_missions, gl.viewportWidth - 512, gl.viewportHeight - 64,
+                  512, 64,
+                  0.0, GAME_missionScroll.y * 64.0 / 1024.0,
+                  1.0, (GAME_missionScroll.y + 1) * 64.0 / 1024.0);
 
   DRAW_Flush ();
 }
@@ -1193,10 +1260,13 @@ function GAME_ShootAtBaddies (deltaTime)
       if (cell.nextBullet > 0)
         continue;
 
-      if (cell.projectileMass * GAME_PROJECTILE_MASS_MULTIPLIER > GAME_mass)
+      if (GAME_mass - GAME_PROJECTILE_MASS <= GAME_CELL_COST)
         continue;
 
-      if (!GAME_RequireEnergy (1.0 / cell.efficiency))
+      if (GAME_PROJECTILE_MASS > GAME_mass)
+        continue;
+
+      if (!GAME_RequireEnergy (10.0 / cell.efficiency))
         continue;
 
       dx = GAME_baddies[nearestBaddie].x - cell.x;
@@ -1208,10 +1278,11 @@ function GAME_ShootAtBaddies (deltaTime)
       projectile.y = cell.y;
       projectile.velX = 150 * dx / mag * cell.muzzleVelocity;
       projectile.velY = 150 * dy / mag * cell.muzzleVelocity;
-      projectile.mass = cell.projectileMass * GAME_PROJECTILE_MASS_MULTIPLIER;
+      projectile.radius = 5.0;
+      projectile.damage = GAME_PROJECTILE_DAMAGE;
       GAME_projectiles.push (projectile);
 
-      GAME_mass -= cell.projectileMass * GAME_PROJECTILE_MASS_MULTIPLIER;
+      GAME_mass -= GAME_PROJECTILE_MASS;
 
       cell.nextBullet = 3.0 / cell.fireRate;
     }
@@ -1240,6 +1311,8 @@ function GAME_Update ()
   if (!GAME_over)
     {
       VEC_CruiseTo (GAME_camera, { x: 0, y: 0 }, 2000, 1e6, deltaTime);
+
+      GAME_score += 5 * deltaTime;
 
       GAME_energy += GAME_ENERGY_SOLAR_INPUT * deltaTime; /* Solar energy */
       GAME_health += GAME_HEALTH_REGENERATION * deltaTime; /* Recouperation */
@@ -1290,7 +1363,7 @@ function GAME_Update ()
       if (GAME_nextBaddieSpawn < 0.0)
         {
           GAME_baddies.push (GAME_GenerateBaddie ());
-          GAME_nextBaddieSpawn = 6.0 / (1.0 + GAME_difficulty * 0.01);
+          GAME_nextBaddieSpawn = 6.0 / (1.0 + GAME_difficulty * 0.02);
         }
     }
   else if (GAME_shake <= 0) /* GAME_over */
@@ -1300,22 +1373,26 @@ function GAME_Update ()
 
   for (i = 0; i < GAME_baddies.length; )
     {
-      var baddie, mag;
+      var baddie, mag, force, maxVelocity;
 
       baddie = GAME_baddies[i];
 
       baddie.age += deltaTime;
 
       mag = 1.0 / Math.sqrt (baddie.x * baddie.x + baddie.y * baddie.y);
-      baddie.velX -= GAME_BADDIE_ACCELERATION * baddie.x * mag * deltaTime;
-      baddie.velY -= GAME_BADDIE_ACCELERATION * baddie.y * mag * deltaTime;
+      force = GAME_BADDIE_ACCELERATION * (1.0 + GAME_difficulty * 0.02) * mag * deltaTime;
+
+      baddie.velX -= force * baddie.x;
+      baddie.velY -= force * baddie.y;
 
       mag = Math.sqrt (baddie.velX * baddie.velX + baddie.velY * baddie.velY);
 
-      if (mag > 50)
+      maxVelocity = 50 * (1.0 + GAME_difficulty * 0.01);
+
+      if (mag > maxVelocity)
         {
-          baddie.velX = baddie.velX * 50.0 / mag;
-          baddie.velY = baddie.velY * 50.0 / mag;
+          baddie.velX = baddie.velX * maxVelocity / mag;
+          baddie.velY = baddie.velY * maxVelocity / mag;
         }
 
       baddie.x += baddie.velX * deltaTime;
@@ -1325,9 +1402,11 @@ function GAME_Update ()
       if (!GAME_over
           && baddie.x * baddie.x + baddie.y * baddie.y < (GAME_BLOB_RADIUS + baddie.radius) * (GAME_BLOB_RADIUS + baddie.radius))
         {
-          GAME_baddies.splice(i, 1);
-          GAME_health -= GAME_BADDIE_DAMAGE;
+          GAME_health -= GAME_BADDIE_DAMAGE * baddie.health / 100;
           GAME_shake = 0.5;
+
+          GAME_baddies.splice(i, 1);
+          ++GAME_mission;
 
           for (j = 0; j < GAME_cells.length; ++j)
             {
@@ -1368,16 +1447,18 @@ function GAME_Update ()
               dx = baddie.x - projectile.x;
               dy = baddie.y - projectile.y;
 
-              if (dx * dx + dy * dy < (baddie.radius + projectile.mass) * (baddie.radius + projectile.mass))
+              if (dx * dx + dy * dy < (baddie.radius + projectile.radius) * (baddie.radius + projectile.radius))
                 {
                   var amount;
 
                   GAME_projectiles.splice (i, 1);
 
-                  amount = projectile.mass * 10.0;
+                  amount = projectile.damage;
 
                   if (baddie.health < amount)
                     amount = baddie.health;
+
+                  GAME_score += GAME_SCORE_DAMAGE * amount;
 
                   baddie.health -= amount;
 
@@ -1405,6 +1486,9 @@ function GAME_Update ()
 
   GAME_difficulty += deltaTime;
 
+  if (GAME_score > GAME_bestScore)
+    GAME_bestScore = GAME_score;
+
   /*********************************************************************/
 
   GAME_Draw (deltaTime);
@@ -1418,6 +1502,7 @@ function GAME_SetupTextures ()
   GFX_traitLegend = DRAW_LoadTexture ("gfx/trait-legend.png");
   GFX_statLegend = DRAW_LoadTexture ("gfx/stat-legend.png");
   GFX_score = DRAW_LoadTexture ("gfx/score.png");
+  GFX_missions = DRAW_LoadTexture ("gfx/missions.png");
 }
 
 function GAME_GenerateCell ()
@@ -1426,7 +1511,6 @@ function GAME_GenerateCell ()
 
   result = new Object ();
   result.muzzleVelocity = 1.0;
-  result.projectileMass = 1.0;
   result.fireRate = 1.0;
   result.aim = 1.0;
   result.repair = 1.0;
@@ -1454,7 +1538,7 @@ function GAME_RandomScale ()
 {
   /* Positive number, equal chance of 0.5 and 2.0, equal chance of 0.33 and 3.0, etc */
 
-  return Math.pow (2, 0.3 * Math.sqrt (-2 * Math.log (Math.random ())) * Math.cos (2 * Math.PI * Math.random ()));
+  return Math.pow (2, Math.sqrt (-2 * Math.log (Math.random ())) * Math.cos (2 * Math.PI * Math.random ()));
 }
 
 function GAME_SplitCell (cell)
@@ -1463,12 +1547,12 @@ function GAME_SplitCell (cell)
 
   result = new Object ();
   result.muzzleVelocity = cell.muzzleVelocity;
-  result.projectileMass = cell.projectileMass;
   result.fireRate = cell.fireRate * GAME_RandomScale ();
   result.aim = cell.aim * GAME_RandomScale ();
   result.repair = cell.repair * GAME_RandomScale ();
   result.efficiency = cell.efficiency * GAME_RandomScale ();
   result.anabolism = cell.anabolism * GAME_RandomScale ();
+  result.shield = cell.shield * GAME_RandomScale ();
   result.energyStorage = cell.energyStorage * GAME_RandomScale ();
   result.massStorage = cell.massStorage * GAME_RandomScale ();
   result.nextBullet = cell.nextBullet + 0.5;
@@ -1482,6 +1566,8 @@ function GAME_SplitCell (cell)
   result.dram = 0.0;
 
   GAME_nextCellColor = (GAME_nextCellColor + 1) % GAME_cellColors.length;
+
+  GAME_score += 157;
 
   return result;
 }
@@ -1514,9 +1600,13 @@ function GAME_Reset ()
   GAME_projectiles = new Array ();
   GAME_health = 100.0;
   GAME_over = false;
-  GAME_energy = 100.0, GAME_energyStorage = 200.0;
-  GAME_mass = 100.0, GAME_massStorage = 200.0;
+  GAME_energy = 100.0;
+  GAME_energyStorage = 200.0;
+  GAME_mass = 100.0;
+  GAME_massStorage = 200.0;
   GAME_difficulty = 0.0;
+  GAME_mission = 0;
+  GAME_missionScroll = { x: 0, y: 0, velX: 0, velY: 0 };
 
   GAME_focusCell = -1;
   GAME_cursorBlink = 0;
@@ -1527,6 +1617,7 @@ function GAME_Reset ()
   GAME_nextBaddieSpawn = 1.0;
 
   GAME_cells.push (GAME_GenerateCell ());
+  GAME_score = 0;
 }
 
 function GAME_Init ()
@@ -1535,7 +1626,5 @@ function GAME_Init ()
 
   SYS_Init ();
 
-  GAME_nextBaddieSpawn = 0.0;
-
-  GAME_cells.push (GAME_GenerateCell ());
+  GAME_Reset ();
 }
