@@ -794,6 +794,14 @@ function GAME_ButtonPressed (ev)
     {
     case 0:
 
+      if (GAME_over)
+        {
+          if (GAME_shake <= 0)
+            GAME_Reset ();
+
+          break;
+        }
+
       if (GAME_focusCell >= 0 && GAME_mass > 20 && GAME_cells.length < 13 && GAME_RequireEnergy (10))
         {
           GAME_mass -= 20;
@@ -824,19 +832,6 @@ function GAME_Draw (deltaTime)
   var blobX, blobY, i, focusSetThisFrame = false;
 
   DRAW_UpdateViewport ();
-
-  if (GAME_shake > 0)
-    {
-      GAME_camera.y = 20 * Math.sin (25 * GAME_shake) * GAME_shake;
-      GAME_camera.x = 10 * Math.sin (50 * GAME_shake) * GAME_shake;
-      GAME_shake -= deltaTime;
-
-      if (GAME_shake <= 0)
-        {
-          GAME_camera.x = 0.0;
-          GAME_camera.y = 0.0;
-        }
-    }
 
   gl.uniform4f (gl.getUniformLocation (shaderProgram, "uniform_Camera"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight, GAME_camera.x, GAME_camera.y);
 
@@ -1048,6 +1043,11 @@ function GAME_Draw (deltaTime)
   i = GAME_mass / GAME_massStorage * 200;
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 20, i, 10);
 
+  if (GAME_camera.y < 0)
+    {
+      DRAW_AddQuad (GFX_score, 0, -gl.viewportHeight, 512, 256);
+    }
+
   DRAW_Flush ();
 }
 
@@ -1228,10 +1228,19 @@ function GAME_Update ()
   if (deltaTime < 0 || deltaTime > 0.033)
     deltaTime = 0.033;
 
+  if (GAME_shake > 0)
+    {
+      GAME_camera.y = 20 * Math.sin (25 * GAME_shake) * GAME_shake;
+      GAME_camera.x = 10 * Math.sin (50 * GAME_shake) * GAME_shake;
+      GAME_shake -= deltaTime;
+    }
+
   /*********************************************************************/
 
   if (!GAME_over)
     {
+      VEC_CruiseTo (GAME_camera, { x: 0, y: 0 }, 2000, 1e6, deltaTime);
+
       GAME_energy += GAME_ENERGY_SOLAR_INPUT * deltaTime; /* Solar energy */
       GAME_health += GAME_HEALTH_REGENERATION * deltaTime; /* Recouperation */
 
@@ -1287,8 +1296,6 @@ function GAME_Update ()
   else if (GAME_shake <= 0) /* GAME_over */
     {
       VEC_CruiseTo (GAME_camera, { x: 0, y: -gl.viewportHeight }, 2000, 1e6, deltaTime);
-
-      DRAW_AddQuad (GFX_score, 0, -gl.viewportHeight, 512, 256);
     }
 
   for (i = 0; i < GAME_baddies.length; )
@@ -1336,13 +1343,14 @@ function GAME_Update ()
 
   for (i = 0; i < GAME_projectiles.length; )
     {
-      var projectile = GAME_projectiles[i];
+      var projectile = GAME_projectiles[i], mag;
 
       projectile.x += projectile.velX * deltaTime;
       projectile.y += projectile.velY * deltaTime;
 
-      if (projectile.x > GAME_BADDIE_SPAWN_DISTANCE || projectile.y > GAME_BADDIE_SPAWN_DISTANCE
-          || projectile.x < -GAME_BADDIE_SPAWN_DISTANCE || projectile.y < -GAME_BADDIE_SPAWN_DISTANCE)
+      mag = projectile.x * projectile.x + projectile.y * projectile.y;
+
+      if (mag > 2 * GAME_BADDIE_SPAWN_DISTANCE * GAME_BADDIE_SPAWN_DISTANCE)
         {
           GAME_projectiles.splice (i, 1);
 
@@ -1497,6 +1505,28 @@ function GAME_GenerateBaddie ()
   result.age = 0;
 
   return result;
+}
+
+function GAME_Reset ()
+{
+  GAME_cells = new Array ();
+  GAME_baddies = new Array ();
+  GAME_projectiles = new Array ();
+  GAME_health = 100.0;
+  GAME_over = false;
+  GAME_energy = 100.0, GAME_energyStorage = 200.0;
+  GAME_mass = 100.0, GAME_massStorage = 200.0;
+  GAME_difficulty = 0.0;
+
+  GAME_focusCell = -1;
+  GAME_cursorBlink = 0;
+  GAME_shake = 0;
+
+  GAME_nextCellColor = 0;
+
+  GAME_nextBaddieSpawn = 1.0;
+
+  GAME_cells.push (GAME_GenerateCell ());
 }
 
 function GAME_Init ()
