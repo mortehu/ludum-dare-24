@@ -1074,7 +1074,7 @@ function GAME_Draw (deltaTime)
                 }
             }
 
-          DRAW_SetColor (1.0, 0.0, 0.3, 1.0);
+          DRAW_SetColor (0.0, 0.0, 0.0, 0.3);
 
           for (i = 0; i < GAME_cellTraits.length; ++i)
             {
@@ -1441,7 +1441,7 @@ function GAME_Update ()
       if (GAME_nextBaddieSpawn < 0.0)
         {
           GAME_baddies.push (GAME_GenerateBaddie ());
-          GAME_nextBaddieSpawn = 6.0 / (1.0 + GAME_difficulty * 0.02);
+          GAME_nextBaddieSpawn = 6.0 / (1.0 + GAME_difficulty * 0.015);
         }
     }
   else if (GAME_shake <= 0) /* GAME_over */
@@ -1458,7 +1458,7 @@ function GAME_Update ()
       baddie.age += deltaTime;
 
       mag = 1.0 / Math.sqrt (baddie.x * baddie.x + baddie.y * baddie.y);
-      force = GAME_BADDIE_ACCELERATION * (1.0 + GAME_difficulty * 0.01) * mag * deltaTime;
+      force = GAME_BADDIE_ACCELERATION * (1.0 + GAME_difficulty * 0.007) * mag * deltaTime;
 
       baddie.velX -= force * baddie.x;
       baddie.velY -= force * baddie.y;
