@@ -790,6 +790,8 @@ var GAME_nextBaddieSpawn;
 var GAME_scoreAnim;
 var GAME_scoreAnimAmount;
 
+var GAME_mission6Progress;
+
 var GAME_paused = false;
 
 function GAME_KeyPressed(e)
@@ -1275,7 +1277,26 @@ function GAME_CompleteMission (nr)
   ++GAME_mission;
 
   GAME_scoreAnim = 0;
-  GAME_scoreAnimAmount = (nr < 2) ? 500 : 10000;
+
+  switch (nr)
+    {
+    case 0:
+    case 1:
+
+      GAME_scoreAnimAmount = 500;
+
+      break;
+
+    case 6:
+
+      GAME_scoreAnimAmount = Math.floor (GAME_score);
+
+      break;
+
+    default:
+
+      GAME_scoreAnimAmount = 10000;
+    }
 
   GAME_score += 10000;
 
@@ -1432,6 +1453,9 @@ function GAME_Update ()
             GAME_energy = 0;
         }
 
+      if (GAME_mission == 7 && !GAME_energy)
+        GAME_CompleteMission (7);
+
       if (GAME_energy > GAME_energyStorage)
         GAME_energy = GAME_energyStorage;
 
@@ -1553,7 +1577,12 @@ function GAME_Update ()
                   baddie.health -= amount;
 
                   if (baddie.health < 5)
-                    GAME_baddies.splice(j, 1);
+                    {
+                      if (GAME_mission == 6 && ++GAME_mission6Progress == 10)
+                        GAME_CompleteMission (6);
+
+                      GAME_baddies.splice(j, 1);
+                    }
 
                   break;
                 }
@@ -1729,6 +1758,8 @@ function GAME_Reset ()
   GAME_nextCellColor = 0;
 
   GAME_nextBaddieSpawn = 1.0;
+
+  GAME_mission6Progress = 0;
 
   GAME_cells.push (GAME_GenerateCell ());
   GAME_score = 0;
