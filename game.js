@@ -32,7 +32,9 @@ soundManager.onerror = function()
 
 /***********************************************************************/
 
-var GAME_BADDIE_DAMAGE = 30.0;
+var GAME_CELL_BLINK_MIN = 5.0;
+var GAME_CELL_BLINK_EXTRA = 4.0;
+var GAME_BADDIE_DAMAGE = 15.0;
 var GAME_BADDIE_SPAWN_DISTANCE = 600;
 var GAME_BLOB_RADIUS = 100.0;
 var GAME_CELL_RADIUS = 20.0;
@@ -395,6 +397,84 @@ function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
     }
 }
 
+function DRAW_AddMouth (texture, centerX, centerY, innerRadius, outerRadius)
+{
+  var sector, ps, pc, sectorCount;
+
+  if (texture != DRAW_currentTexture)
+    DRAW_Flush ();
+
+  DRAW_currentTexture = texture;
+
+  ps = Math.sin(Math.PI * 1.5);
+  pc = Math.cos(Math.PI * 1.5);
+
+  for (sector = 0; sector < 4; ++sector)
+    {
+      var s, c;
+
+      s = Math.sin(Math.PI * 1.5 + (sector + 1) / 8 * 2 * Math.PI);
+      c = Math.cos(Math.PI * 1.5 + (sector + 1) / 8 * 2 * Math.PI);
+
+      DRAW_vertices.push (centerX + outerRadius * ps);
+      DRAW_vertices.push (centerY + outerRadius * pc);
+      DRAW_vertices.push (DRAW_red);
+      DRAW_vertices.push (DRAW_green);
+      DRAW_vertices.push (DRAW_blue);
+      DRAW_vertices.push (DRAW_alpha);
+      DRAW_vertices.push (0.0);
+      DRAW_vertices.push (0.0);
+
+      DRAW_vertices.push (centerX + innerRadius * ps);
+      DRAW_vertices.push (centerY + innerRadius * pc);
+      DRAW_vertices.push (DRAW_red);
+      DRAW_vertices.push (DRAW_green);
+      DRAW_vertices.push (DRAW_blue);
+      DRAW_vertices.push (DRAW_alpha);
+      DRAW_vertices.push (0.0);
+      DRAW_vertices.push (0.0);
+
+      DRAW_vertices.push (centerX + innerRadius * s);
+      DRAW_vertices.push (centerY + innerRadius * c);
+      DRAW_vertices.push (DRAW_red);
+      DRAW_vertices.push (DRAW_green);
+      DRAW_vertices.push (DRAW_blue);
+      DRAW_vertices.push (DRAW_alpha);
+      DRAW_vertices.push (0.0);
+      DRAW_vertices.push (0.0);
+
+      DRAW_vertices.push (centerX + outerRadius * ps);
+      DRAW_vertices.push (centerY + outerRadius * pc);
+      DRAW_vertices.push (DRAW_red);
+      DRAW_vertices.push (DRAW_green);
+      DRAW_vertices.push (DRAW_blue);
+      DRAW_vertices.push (DRAW_alpha);
+      DRAW_vertices.push (0.0);
+      DRAW_vertices.push (0.0);
+
+      DRAW_vertices.push (centerX + innerRadius * s);
+      DRAW_vertices.push (centerY + innerRadius * c);
+      DRAW_vertices.push (DRAW_red);
+      DRAW_vertices.push (DRAW_green);
+      DRAW_vertices.push (DRAW_blue);
+      DRAW_vertices.push (DRAW_alpha);
+      DRAW_vertices.push (0.0);
+      DRAW_vertices.push (0.0);
+
+      DRAW_vertices.push (centerX + outerRadius * s);
+      DRAW_vertices.push (centerY + outerRadius * c);
+      DRAW_vertices.push (DRAW_red);
+      DRAW_vertices.push (DRAW_green);
+      DRAW_vertices.push (DRAW_blue);
+      DRAW_vertices.push (DRAW_alpha);
+      DRAW_vertices.push (0.0);
+      DRAW_vertices.push (0.0);
+
+      ps = s;
+      pc = c;
+    }
+}
+
 function DRAW_AddSpiky (texture, centerX, centerY, innerRadius, outerRadius, angle)
 {
   var sector, ps, pc;
@@ -647,6 +727,8 @@ var GAME_mass = 100.0, GAME_massStorage = 200.0;
 var GAME_difficulty = 0.0;
 
 var GAME_focusCell = -1;
+var GAME_cursorBlink = 0;
+var GAME_shake = 0;
 
 function GAME_KeyPressed(e)
 {
@@ -698,8 +780,13 @@ function GAME_ButtonPressed (ev)
 
       if (GAME_focusCell >= 0 && GAME_cells.length > 1)
         {
+          var i;
+
           GAME_cells.splice (GAME_focusCell, 1);
           GAME_focusCell = -1;
+
+          for (i = 0; i < GAME_cells.length; ++i)
+            GAME_cells[i].drama = 2.0;
         }
 
       break;
@@ -712,6 +799,19 @@ function GAME_Draw (deltaTime)
 
   DRAW_UpdateViewport ();
 
+  if (GAME_shake > 0)
+    {
+      GAME_camera.y = 20 * Math.sin (25 * GAME_shake) * GAME_shake;
+      GAME_camera.x = 10 * Math.sin (50 * GAME_shake) * GAME_shake;
+    }
+  else
+    {
+      GAME_camera.x = 0.0;
+      GAME_camera.y = 0.0;
+    }
+
+  GAME_shake -= deltaTime;
+
   gl.uniform4f (gl.getUniformLocation (shaderProgram, "uniform_Camera"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight, GAME_camera.x, GAME_camera.y);
 
   DRAW_SetBlendMode (-1);
@@ -719,7 +819,7 @@ function GAME_Draw (deltaTime)
   blobX = gl.viewportWidth * 0.5;
   blobY = gl.viewportHeight * 0.5;
 
-  DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
+  DRAW_SetColor (0.0, 0.0, 0.0, 1.0);
 
   for (i = 0; i < GAME_projectiles.length; ++i)
     {
@@ -728,25 +828,25 @@ function GAME_Draw (deltaTime)
       DRAW_AddCircle (GFX_solid, blobX + projectile.x, blobY + projectile.y, 0, projectile.mass);
     }
 
-  DRAW_SetColor (0.8, 0.7, 0.4, 1.0);
+  DRAW_SetColor (0.1, 0.4, 0.5, 1.0);
 
   DRAW_AddCircle (GFX_solid, blobX, blobY,
-                  GAME_BLOB_RADIUS - 10,         /* inner radius */
-                  GAME_BLOB_RADIUS);             /* outer radius */
+                  GAME_BLOB_RADIUS,         /* inner radius */
+                  GAME_BLOB_RADIUS + 5);    /* outer radius */
 
   DRAW_SetBlendMode (0);
 
-  DRAW_SetColor (0.8, 0.7, 0.4, 0.2);
+  DRAW_SetColor (0.1, 0.4, 0.5, 0.3);
   DRAW_AddCircle (GFX_solid, blobX, blobY,
-                  0,                              /* inner radius */
-                  GAME_BLOB_RADIUS - 10);         /* outer radius */
+                  0,                        /* inner radius */
+                  GAME_BLOB_RADIUS);        /* outer radius */
 
   DRAW_SetBlendMode (-1);
 
-  for (i = 0; i < GAME_cells.length; ++i)
+  for (i = GAME_cells.length; i-- > 0; )
     {
       var cell = GAME_cells[i];
-      var x, y;
+      var x, y, s, c;
 
       x = cell.x + blobX;
       y = cell.y + blobY;
@@ -760,20 +860,92 @@ function GAME_Draw (deltaTime)
 
           if (dx * dx + dy * dy < GAME_CELL_RADIUS * GAME_CELL_RADIUS)
             {
-              GAME_focusCell = i;
+              if (GAME_focusCell != i)
+                {
+                  GAME_focusCell = i;
+                  GAME_cursorBlink = 0;
+                }
 
               focusSetThisFrame = true;
             }
         }
 
       if (GAME_focusCell == i)
-        DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
-      else
-        DRAW_SetColor (0.3, 0.8, 1.0, 1.0);
+        {
+          DRAW_SetColor (0.1, 0.4, 0.5, 0.8 * Math.abs (Math.cos (GAME_cursorBlink)));
+          DRAW_AddCircle (GFX_solid, x, y,
+                          0.0,               /* inner radius */
+                          GAME_CELL_RADIUS + 2); /* outer radius */
+
+          GAME_cursorBlink += deltaTime * 4.0;
+        }
+
+      /* Body */
+
+      DRAW_SetColor (cell.r, cell.g, cell.b, 1.0);
 
       DRAW_AddCircle (GFX_solid, x, y,
                       0.0,               /* inner radius */
                       GAME_CELL_RADIUS); /* outer radius */
+
+      /* Mouth */
+
+      DRAW_SetColor (0.0, 0.0, 0.0, 1.0);
+
+      if (cell.drama > 0)
+        {
+          cell.drama -= deltaTime;
+
+          DRAW_AddCircle (GFX_solid, x, y + GAME_CELL_RADIUS * 0.5 - 2,
+                         0, 4);
+
+        }
+      else
+        DRAW_AddMouth (GFX_solid, x, y + GAME_CELL_RADIUS * 0.5 - 4,
+                       3, 5);
+
+      /* Eyes */
+
+      cell.nextBlink -= deltaTime;
+
+      if (cell.nextBlink < 0)
+        {
+          if (cell.nextBlink < -0.03333)
+            cell.nextBlink = GAME_CELL_BLINK_MIN + GAME_CELL_BLINK_EXTRA * Math.random ();
+        }
+      else
+        {
+          if (cell.drama > 0)
+            {
+              s = 0;
+              c = 0;
+            }
+          else
+            {
+              s = Math.sin (cell.lookAngle) * 2;
+              c = Math.cos (cell.lookAngle) * 2;
+            }
+
+          DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
+
+          DRAW_AddCircle (GFX_solid, x - 5 - GAME_CELL_RADIUS * 0.1, y - GAME_CELL_RADIUS * 0.6 + 5,
+                          0.0,               /* inner radius */
+                          5);                /* outer radius */
+
+          DRAW_AddCircle (GFX_solid, x + 5 + GAME_CELL_RADIUS * 0.1, y - GAME_CELL_RADIUS * 0.6 + 5,
+                          0.0,               /* inner radius */
+                          5);                /* outer radius */
+
+          DRAW_SetColor (0.0, 0.0, 0.0, 1.0);
+
+          DRAW_AddCircle (GFX_solid, x - 5 - GAME_CELL_RADIUS * 0.1 + c, y - GAME_CELL_RADIUS * 0.6 + 5 + s,
+                          0.0,               /* inner radius */
+                          2);                /* outer radius */
+
+          DRAW_AddCircle (GFX_solid, x + 5 + GAME_CELL_RADIUS * 0.1 + c, y - GAME_CELL_RADIUS * 0.6 + 5 + s,
+                          0.0,               /* inner radius */
+                          2);                /* outer radius */
+        }
     }
 
   DRAW_SetColor (1.0, 0.0, 0.3, 1.0);
@@ -792,7 +964,7 @@ function GAME_Draw (deltaTime)
 
   if (GAME_focusCell >= 0)
     {
-      DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
+      DRAW_SetColor (0.05, 0.2, 0.25, 1.0);
 
       for (i = 0; i < GAME_cellTraits.length; ++i)
         DRAW_AddQuad (GFX_solid, 190, 12 + i * 23, 50 * GAME_cells[GAME_focusCell][GAME_cellTraits[i]], 10);
@@ -803,24 +975,24 @@ function GAME_Draw (deltaTime)
   else
     DRAW_SetBlendMode (0);
 
-  DRAW_SetColor (1.00, 1.00, 1.00, 1.0);
+  DRAW_SetColor (0.05, 0.2, 0.25, 1.0);
   DRAW_AddQuad (GFX_statLegend, 8, gl.viewportHeight - 61, 16, 64);
 
-  DRAW_SetColor (1.00, 1.00, 1.00, 0.3);
+  DRAW_SetColor (0.00, 0.00, 0.00, 0.5);
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 60, 400, 10);
-  DRAW_SetColor (1.00, 1.00, 1.00, 0.7);
+  DRAW_SetColor (1.00, 1.00, 1.00, 0.9);
   i = GAME_health * 4;
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 60, i, 10);
 
-  DRAW_SetColor (0.70, 0.44, 0.09, 0.3);
+  DRAW_SetColor (0.00, 0.00, 0.00, 0.5);
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 40, 400, 10);
-  DRAW_SetColor (0.70, 0.44, 0.09, 0.7);
+  DRAW_SetColor (0.70, 0.44, 0.09, 0.9);
   i = GAME_energy / GAME_energyStorage * 400;
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 40, i, 10);
 
-  DRAW_SetColor (0.95, 0.64, 0.19, 0.3);
+  DRAW_SetColor (0.00, 0.00, 0.00, 0.5);
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 20, 400, 10);
-  DRAW_SetColor (0.95, 0.64, 0.19, 0.7);
+  DRAW_SetColor (0.95, 0.64, 0.19, 0.9);
   i = GAME_mass / GAME_massStorage * 200;
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 20, i, 10);
 
@@ -887,6 +1059,8 @@ function GAME_RepelCells (deltaTime)
           continue;
         }
 
+      cellA.drama = 0.2;
+
       mag = Math.sqrt (forceX * forceX + forceY * forceY);
 
       if (mag > 1)
@@ -942,15 +1116,6 @@ function GAME_ShootAtBaddies (deltaTime)
 
       cell.nextBullet -= deltaTime;
 
-      if (cell.nextBullet > 0)
-        continue;
-
-      if (cell.projectileMass * GAME_PROJECTILE_MASS_MULTIPLIER > GAME_mass)
-        continue;
-
-      if (!GAME_RequireEnergy (1.0 / cell.efficiency))
-        continue;
-
       for (j = 0; j < GAME_baddies.length; ++j)
         {
           var baddie;
@@ -967,6 +1132,20 @@ function GAME_ShootAtBaddies (deltaTime)
               nearestBaddieDistance = mag;
             }
         }
+
+      dx = GAME_baddies[nearestBaddie].x - cell.x;
+      dy = GAME_baddies[nearestBaddie].y - cell.y;
+
+      cell.lookAngle = Math.atan2 (dy, dx);
+
+      if (cell.nextBullet > 0)
+        continue;
+
+      if (cell.projectileMass * GAME_PROJECTILE_MASS_MULTIPLIER > GAME_mass)
+        continue;
+
+      if (!GAME_RequireEnergy (1.0 / cell.efficiency))
+        continue;
 
       dx = GAME_baddies[nearestBaddie].x - cell.x;
       dy = GAME_baddies[nearestBaddie].y - cell.y;
@@ -1065,6 +1244,13 @@ function GAME_Update ()
         {
           GAME_baddies.splice(i, 1);
           GAME_health -= GAME_BADDIE_DAMAGE;
+          GAME_shake = 0.5;
+
+          for (j = 0; j < GAME_cells.length; ++j)
+            {
+              GAME_cells[j].drama = 0.9;
+              GAME_cells[j].nextBlink = 0.0;
+            }
         }
       else
         ++i;
@@ -1143,13 +1329,29 @@ function GAME_SetupTextures ()
   GFX_statLegend = DRAW_LoadTexture ("gfx/stat-legend.png");
 }
 
+var GAME_cellColors =
+[
+  0x77aaee,
+  0x77eeaa,
+  0xaa77ee,
+  0xb3ef1a,
+  0xee77aa,
+  0xeeaa77,
+  0xff1ab3,
+  0xffb219,
+  0xff3a3a,
+  0x1ab3ff,
+];
+
+var GAME_nextCellColor = 0;
+
 function GAME_GenerateCell ()
 {
   var result;
 
   result = new Object ();
   result.muzzleVelocity = 1.0;
-  result.projectileMass = 1.1;
+  result.projectileMass = 1.0;
   result.fireRate = 1.2;
   result.aim = 1.3;
   result.repair = 1.5;
@@ -1161,15 +1363,23 @@ function GAME_GenerateCell ()
   result.nextBullet = 0.0;
   result.x = 0;
   result.y = 0;
+  result.r = ((GAME_cellColors[GAME_nextCellColor] >> 16) & 0xff) / 255.0;
+  result.g = ((GAME_cellColors[GAME_nextCellColor] >> 8) & 0xff) / 255.0;
+  result.b = (GAME_cellColors[GAME_nextCellColor] & 0xff) / 255.0;
+  result.lookAngle = 0.0;
+  result.nextBlink = 5.0 + Math.random ();
+  result.drama = 0.0;
+
+  GAME_nextCellColor = (GAME_nextCellColor + 1) % GAME_cellColors.length;
 
   return result;
 }
 
 function GAME_RandomScale ()
 {
-  /* Positive number, equal chance of 0.5 and 2.0 */
+  /* Positive number, equal chance of 0.5 and 2.0, equal chance of 0.33 and 3.0, etc */
 
-  return Math.pow (2, 0.5 * Math.sqrt (-2 * Math.log (Math.random ())) * Math.cos (2 * Math.PI * Math.random ()));
+  return Math.pow (2, 0.3 * Math.sqrt (-2 * Math.log (Math.random ())) * Math.cos (2 * Math.PI * Math.random ()));
 }
 
 function GAME_SplitCell (cell)
@@ -1177,8 +1387,8 @@ function GAME_SplitCell (cell)
   var result;
 
   result = new Object ();
-  result.muzzleVelocity = cell.muzzleVelocity * GAME_RandomScale ();
-  result.projectileMass = cell.projectileMass * GAME_RandomScale ();
+  result.muzzleVelocity = cell.muzzleVelocity;
+  result.projectileMass = cell.projectileMass;
   result.fireRate = cell.fireRate * GAME_RandomScale ();
   result.aim = cell.aim * GAME_RandomScale ();
   result.repair = cell.repair * GAME_RandomScale ();
@@ -1189,6 +1399,14 @@ function GAME_SplitCell (cell)
   result.nextBullet = cell.nextBullet + 0.5;
   result.x = cell.x;
   result.y = cell.y;
+  result.r = ((GAME_cellColors[GAME_nextCellColor] >> 16) & 0xff) / 255.0;
+  result.g = ((GAME_cellColors[GAME_nextCellColor] >> 8) & 0xff) / 255.0;
+  result.b = (GAME_cellColors[GAME_nextCellColor] & 0xff) / 255.0;
+  result.lookAngle = 0.0;
+  result.nextBlink = GAME_CELL_BLINK_MIN + GAME_CELL_BLINK_EXTRA * Math.random ();
+  result.dram = 0.0;
+
+  GAME_nextCellColor = (GAME_nextCellColor + 1) % GAME_cellColors.length;
 
   return result;
 }
@@ -1208,6 +1426,7 @@ function GAME_GenerateBaddie ()
   result.y = s * GAME_BADDIE_SPAWN_DISTANCE;
   result.angle = Math.random ();
   result.health = 30 * (1.0 + GAME_difficulty * 0.05);
+  result.nextBlink = GAME_CELL_BLINK_MIN + GAME_CELL_BLINK_EXTRA * Math.random ();
 
   return result;
 }
