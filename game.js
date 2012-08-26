@@ -32,7 +32,7 @@ soundManager.onerror = function()
 
 /***********************************************************************/
 
-var GAME_BADDIE_DAMAGE_MULTIPLIER = 0.3;
+var GAME_BADDIE_DAMAGE = 30.0;
 var GAME_BADDIE_SPAWN_DISTANCE = 600;
 var GAME_BLOB_RADIUS = 100.0;
 var GAME_CELL_RADIUS = 20.0;
@@ -633,6 +633,7 @@ function SYS_Init ()
 
 var GFX_solid;
 var GFX_traitLegend;
+var GFX_statLegend;
 
 var GAME_cellTraits = ['fireRate', 'efficiency', 'anabolism', 'shield'];
 
@@ -794,7 +795,7 @@ function GAME_Draw (deltaTime)
       DRAW_SetColor (1.0, 1.0, 1.0, 1.0);
 
       for (i = 0; i < GAME_cellTraits.length; ++i)
-        DRAW_AddQuad (GFX_solid, 180, 14 + i * 20, 50 * GAME_cells[GAME_focusCell][GAME_cellTraits[i]], 10);
+        DRAW_AddQuad (GFX_solid, 190, 12 + i * 23, 50 * GAME_cells[GAME_focusCell][GAME_cellTraits[i]], 10);
 
       DRAW_SetBlendMode (0);
       DRAW_AddQuad (GFX_traitLegend, 0, 0, 256, 128);
@@ -802,23 +803,26 @@ function GAME_Draw (deltaTime)
   else
     DRAW_SetBlendMode (0);
 
+  DRAW_SetColor (1.00, 1.00, 1.00, 1.0);
+  DRAW_AddQuad (GFX_statLegend, 8, gl.viewportHeight - 61, 16, 64);
+
   DRAW_SetColor (1.00, 1.00, 1.00, 0.3);
-  DRAW_AddQuad (GFX_solid, 10, gl.viewportHeight - 60, 400, 10);
+  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 60, 400, 10);
   DRAW_SetColor (1.00, 1.00, 1.00, 0.7);
   i = GAME_health * 4;
-  DRAW_AddQuad (GFX_solid, 10, gl.viewportHeight - 60, i, 10);
+  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 60, i, 10);
 
   DRAW_SetColor (0.70, 0.44, 0.09, 0.3);
-  DRAW_AddQuad (GFX_solid, 10, gl.viewportHeight - 40, 400, 10);
+  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 40, 400, 10);
   DRAW_SetColor (0.70, 0.44, 0.09, 0.7);
-  i = GAME_mass / GAME_massStorage * 200;
-  DRAW_AddQuad (GFX_solid, 10, gl.viewportHeight - 40, i, 10);
+  i = GAME_energy / GAME_energyStorage * 400;
+  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 40, i, 10);
 
   DRAW_SetColor (0.95, 0.64, 0.19, 0.3);
-  DRAW_AddQuad (GFX_solid, 10, gl.viewportHeight - 20, 400, 10);
+  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 20, 400, 10);
   DRAW_SetColor (0.95, 0.64, 0.19, 0.7);
-  i = GAME_energy / GAME_energyStorage * 400;
-  DRAW_AddQuad (GFX_solid, 10, gl.viewportHeight - 20, i, 10);
+  i = GAME_mass / GAME_massStorage * 200;
+  DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 20, i, 10);
 
   DRAW_Flush ();
 }
@@ -1060,7 +1064,7 @@ function GAME_Update ()
       if (baddie.x * baddie.x + baddie.y * baddie.y < (GAME_BLOB_RADIUS + baddie.radius) * (GAME_BLOB_RADIUS + baddie.radius))
         {
           GAME_baddies.splice(i, 1);
-          GAME_health -= baddie.health * GAME_BADDIE_DAMAGE_MULTIPLIER;
+          GAME_health -= GAME_BADDIE_DAMAGE;
         }
       else
         ++i;
@@ -1136,6 +1140,7 @@ function GAME_SetupTextures ()
 {
   GFX_solid = DRAW_LoadTexture ("gfx/solid.png");
   GFX_traitLegend = DRAW_LoadTexture ("gfx/trait-legend.png");
+  GFX_statLegend = DRAW_LoadTexture ("gfx/stat-legend.png");
 }
 
 function GAME_GenerateCell ()
@@ -1150,6 +1155,7 @@ function GAME_GenerateCell ()
   result.repair = 1.5;
   result.efficiency = 1.0;
   result.anabolism = 1.0;
+  result.shield = 1.0;
   result.energyStorage = 1.1;
   result.massStorage = 1.2;
   result.nextBullet = 0.0;
