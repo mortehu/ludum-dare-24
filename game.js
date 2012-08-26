@@ -954,7 +954,7 @@ function GAME_Draw (deltaTime)
     {
       var baddie = GAME_baddies[i];
 
-      baddie.radius = Math.pow (baddie.health, 0.7);
+      baddie.radius = baddie.health / 3.0;
 
       DRAW_AddSpiky (GFX_solid, blobX + baddie.x, blobY + baddie.y,
                      baddie.radius * 0.5,  /* inner radius */
@@ -1288,7 +1288,7 @@ function GAME_Update ()
 
               GAME_projectiles.splice (i, 1);
 
-              amount = projectile.mass * 4.0;
+              amount = projectile.mass * 10.0;
 
               if (baddie.health < amount)
                 amount = baddie.health;
@@ -1425,7 +1425,7 @@ function GAME_GenerateBaddie ()
   result.x = c * GAME_BADDIE_SPAWN_DISTANCE;
   result.y = s * GAME_BADDIE_SPAWN_DISTANCE;
   result.angle = Math.random ();
-  result.health = 30 * (1.0 + GAME_difficulty * 0.05);
+  result.health = 100;
   result.nextBlink = GAME_CELL_BLINK_MIN + GAME_CELL_BLINK_EXTRA * Math.random ();
 
   return result;
