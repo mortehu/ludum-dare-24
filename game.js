@@ -54,7 +54,7 @@ var GAME_SCORE_DAMAGE = 3.0;
 
 var gl;
 
-var DRAW_vertices = new Array ();
+var DRAW_vertices = [];
 var DRAW_currentTexture;
 var DRAW_red = 1.0, DRAW_green = 1.0, DRAW_blue = 1.0, DRAW_alpha = 1.0;
 var DRAW_blendMode = 0;
@@ -1054,8 +1054,8 @@ function GAME_Draw (deltaTime)
         {
           var traitsMax, traitsMin;
 
-          traitsMax = new Array();
-          traitsMin = new Array();
+          traitsMax = [];
+          traitsMin = [];
 
           for (i = 0; i < GAME_cellTraits.length; ++i)
             {
@@ -1182,7 +1182,7 @@ function GAME_RepelCells (deltaTime)
 {
   var i, j, updatedPositions, result = false;
 
-  updatedPositions = new Array ();
+  updatedPositions = [];
 
   for (i = 0; i < GAME_cells.length; ++i)
     {
@@ -1248,7 +1248,7 @@ function GAME_RepelCells (deltaTime)
           forceY /= mag;
         }
 
-      newPosition = new Object ();
+      newPosition = {};
       newPosition.x = cellA.x + 50.0 * forceX * deltaTime;
       newPosition.y = cellA.y + 50.0 * forceY * deltaTime;
       updatedPositions.push (newPosition);
@@ -1300,7 +1300,7 @@ function GAME_CompleteMission (nr)
 
   GAME_score += 10000;
 
-  GAME_baddies = new Array ();
+  GAME_baddies = [];
 
   if (GAME_bestScore < 90000)
     GAME_nextBaddieSpawn = 6;
@@ -1373,7 +1373,7 @@ function GAME_ShootAtBaddies (deltaTime)
       dy = GAME_baddies[nearestBaddie].y - cell.y;
       mag = Math.sqrt (nearestBaddieDistance);
 
-      projectile = new Object ();
+      projectile = {};
       projectile.x = cell.x;
       projectile.y = cell.y;
       projectile.velX = 150 * dx / mag * cell.muzzleVelocity;
@@ -1478,7 +1478,7 @@ function GAME_Update ()
       if (GAME_nextBaddieSpawn < 0.0)
         {
           GAME_baddies.push (GAME_GenerateBaddie ());
-          GAME_nextBaddieSpawn = 6.0 / (1.0 + GAME_difficulty * 0.015);
+          GAME_nextBaddieSpawn = 6.0 / (1.0 + Math.pow (GAME_difficulty, 1.1) * 0.014);
         }
     }
   else if (GAME_shake <= 0) /* GAME_over */
@@ -1642,7 +1642,7 @@ function GAME_GenerateCell ()
 {
   var result;
 
-  result = new Object ();
+  result = {};
   result.muzzleVelocity = 1.0;
   result.fireRate = 1.0;
   result.aim = 1.0;
@@ -1678,7 +1678,7 @@ function GAME_SplitCell (cell)
 {
   var result;
 
-  result = new Object ();
+  result = {};
   result.muzzleVelocity = cell.muzzleVelocity;
   result.fireRate = cell.fireRate * GAME_RandomScale ();
   result.aim = cell.aim * GAME_RandomScale ();
@@ -1722,7 +1722,7 @@ function GAME_GenerateBaddie ()
   s = Math.sin (angle);
   c = Math.cos (angle);
 
-  result = new Object ();
+  result = {};
   result.velX = 0;
   result.velY = 0;
   result.x = c * GAME_BADDIE_SPAWN_DISTANCE;
@@ -1737,9 +1737,9 @@ function GAME_GenerateBaddie ()
 
 function GAME_Reset ()
 {
-  GAME_cells = new Array ();
-  GAME_baddies = new Array ();
-  GAME_projectiles = new Array ();
+  GAME_cells = [];
+  GAME_baddies = [];
+  GAME_projectiles = [];
   GAME_health = 100.0;
   GAME_healthMax = 100.0;
   GAME_over = false;
