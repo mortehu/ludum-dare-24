@@ -1478,13 +1478,11 @@ function GAME_Update ()
       if (GAME_nextBaddieSpawn < 0.0)
         {
           GAME_baddies.push (GAME_GenerateBaddie ());
-          GAME_nextBaddieSpawn = 6.0 / (1.0 + Math.pow (GAME_difficulty, 1.1) * 0.014);
+          GAME_nextBaddieSpawn = 6.0 / (1.0 + Math.pow (GAME_difficulty, 1.1) * 0.010);
         }
     }
   else if (GAME_shake <= 0) /* GAME_over */
-    {
-      VEC_CruiseTo (GAME_camera, { x: 0, y: -gl.viewportHeight }, 2000, 1e6, deltaTime);
-    }
+    VEC_CruiseTo (GAME_camera, { x: 0, y: -gl.viewportHeight }, 2000, 1e6, deltaTime);
 
   for (i = 0; i < GAME_baddies.length; )
     {
