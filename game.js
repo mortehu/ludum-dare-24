@@ -35,7 +35,8 @@ soundManager.onerror = function()
 var GAME_CELL_BLINK_MIN = 5.0;
 var GAME_CELL_BLINK_EXTRA = 4.0;
 var GAME_BADDIE_DAMAGE = 15.0;
-var GAME_BADDIE_SPAWN_DISTANCE = 600;
+var GAME_BADDIE_SPAWN_DISTANCE = 333;
+var GAME_BADDIE_ACCELERATION = 10.0;
 var GAME_BLOB_RADIUS = 100.0;
 var GAME_CELL_RADIUS = 20.0;
 var GAME_ENERGY_CELL_UPKEEP = 0.00;
@@ -701,8 +702,8 @@ function SYS_Init ()
   SYS_SetupGL ();
 
   /* XXX: change to document.onkey* */
-  canvas.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
-  canvas.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
+  document.onkeydown = function (event) { GAME_KeyPressed (event); return false; };
+  document.onkeyup = function (event) { GAME_KeyRelease (event); return false; };
   canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); return false; }
   document.onmousedown = function () { GAME_ButtonPressed (event); return false; }
   canvas.onselectstart = function () { return false; }
@@ -714,14 +715,22 @@ function SYS_Init ()
 var GFX_solid;
 var GFX_traitLegend;
 var GFX_statLegend;
+var GFX_score;
 
 var GAME_cellTraits = ['fireRate', 'efficiency', 'anabolism', 'shield'];
+
+var GAME_cellColors =
+[
+  0x77aaee, 0x77eeaa, 0xaa77ee, 0xb3ef1a, 0xee77aa,
+  0xeeaa77, 0xff1ab3, 0xffb219, 0xff3a3a, 0x1ab3ff
+];
 
 var GAME_camera = { x: 0, y: 0, velX: 0, velY: 0 };
 var GAME_cells = new Array ();
 var GAME_baddies = new Array ();
 var GAME_projectiles = new Array ();
 var GAME_health = 100.0;
+var GAME_over = false;
 var GAME_energy = 100.0, GAME_energyStorage = 200.0;
 var GAME_mass = 100.0, GAME_massStorage = 200.0;
 var GAME_difficulty = 0.0;
@@ -729,6 +738,8 @@ var GAME_difficulty = 0.0;
 var GAME_focusCell = -1;
 var GAME_cursorBlink = 0;
 var GAME_shake = 0;
+
+var GAME_nextCellColor = 0;
 
 function GAME_KeyPressed(e)
 {
@@ -746,6 +757,13 @@ function GAME_KeyPressed(e)
     case 'F':
 
       soundManager.play('placeholder', {volume:100});
+
+      break;
+
+    case 'D':
+
+      GAME_health = -1;
+      GAME_shake = 0.5;
 
       break;
     }
@@ -803,14 +821,14 @@ function GAME_Draw (deltaTime)
     {
       GAME_camera.y = 20 * Math.sin (25 * GAME_shake) * GAME_shake;
       GAME_camera.x = 10 * Math.sin (50 * GAME_shake) * GAME_shake;
-    }
-  else
-    {
-      GAME_camera.x = 0.0;
-      GAME_camera.y = 0.0;
-    }
+      GAME_shake -= deltaTime;
 
-  GAME_shake -= deltaTime;
+      if (GAME_shake <= 0)
+        {
+          GAME_camera.x = 0.0;
+          GAME_camera.y = 0.0;
+        }
+    }
 
   gl.uniform4f (gl.getUniformLocation (shaderProgram, "uniform_Camera"), 1.0 / gl.viewportWidth, 1.0 / gl.viewportHeight, GAME_camera.x, GAME_camera.y);
 
@@ -948,13 +966,30 @@ function GAME_Draw (deltaTime)
         }
     }
 
-  DRAW_SetColor (1.0, 0.0, 0.3, 1.0);
-
   for (i = 0; i < GAME_baddies.length; ++i)
     {
       var baddie = GAME_baddies[i];
 
       baddie.radius = baddie.health / 3.0;
+
+      if (baddie.age < 1.0)
+        {
+          DRAW_SetBlendMode (0);
+
+          DRAW_SetColor (0.0, 0.0, 0.0, 1.0 - baddie.age);
+
+          DRAW_AddSpiky (GFX_solid, blobX + baddie.x, blobY + baddie.y,
+                         baddie.radius * 2 * baddie.age * 0.5,  /* inner radius */
+                         baddie.radius * 2 * baddie.age,        /* outer radius */
+                         baddie.angle);
+
+          DRAW_SetBlendMode (-1);
+        }
+
+      if (baddie.age < 1.0)
+        DRAW_SetColor (1.0, 0.0, 0.3, baddie.age);
+      else
+        DRAW_SetColor (1.0, 0.0, 0.3, 1.0);
 
       DRAW_AddSpiky (GFX_solid, blobX + baddie.x, blobY + baddie.y,
                      baddie.radius * 0.5,  /* inner radius */
@@ -967,10 +1002,19 @@ function GAME_Draw (deltaTime)
       DRAW_SetColor (0.05, 0.2, 0.25, 1.0);
 
       for (i = 0; i < GAME_cellTraits.length; ++i)
-        DRAW_AddQuad (GFX_solid, 190, 12 + i * 23, 50 * GAME_cells[GAME_focusCell][GAME_cellTraits[i]], 10);
+        {
+          var width;
+
+          width = 3 + Math.log (100 * GAME_cells[GAME_focusCell][GAME_cellTraits[i]]) / Math.log(10) * 30;
+
+          if (width < 1)
+            width = 1;
+
+          DRAW_AddQuad (GFX_solid, 190, 12 + i * 23, width, 10);
+        }
 
       DRAW_SetBlendMode (0);
-      DRAW_AddQuad (GFX_traitLegend, 0, 0, 256, 128);
+      DRAW_AddQuad (GFX_traitLegend, 4, 10, 512, 128);
     }
   else
     DRAW_SetBlendMode (0);
@@ -1044,7 +1088,7 @@ function GAME_RepelCells (deltaTime)
 
       mag = cellA.x * cellA.x + cellA.y * cellA.y;
 
-      if (mag > (GAME_BLOB_RADIUS - GAME_CELL_RADIUS - 10) * (GAME_BLOB_RADIUS - GAME_CELL_RADIUS - 10))
+      if (mag > (GAME_BLOB_RADIUS - GAME_CELL_RADIUS) * (GAME_BLOB_RADIUS - GAME_CELL_RADIUS))
         {
           mag = Math.sqrt (mag);
 
@@ -1178,69 +1222,93 @@ function GAME_Update ()
 
   /*********************************************************************/
 
-  GAME_energy += GAME_ENERGY_SOLAR_INPUT * deltaTime; /* Solar energy */
-  GAME_health += GAME_HEALTH_REGENERATION * deltaTime; /* Recouperation */
-
-  GAME_energyStorage = GAME_ENERGY_STORAGE_BASE;
-  GAME_massStorage = GAME_MASS_STORAGE_BASE;
-
-  for (i = 0; i < GAME_cells.length; ++i)
+  if (!GAME_over)
     {
-      var cell, amount;
+      GAME_energy += GAME_ENERGY_SOLAR_INPUT * deltaTime; /* Solar energy */
+      GAME_health += GAME_HEALTH_REGENERATION * deltaTime; /* Recouperation */
 
-      cell = GAME_cells[i];
+      GAME_energyStorage = GAME_ENERGY_STORAGE_BASE;
+      GAME_massStorage = GAME_MASS_STORAGE_BASE;
 
-      amount = (4 * cell.anabolism) * deltaTime;
+      for (i = 0; i < GAME_cells.length; ++i)
+        {
+          var cell, amount;
 
-      if (amount > GAME_energy * cell.efficiency)
-        amount = GAME_energy * cell.efficiency;
+          cell = GAME_cells[i];
 
-      if (GAME_mass + amount > GAME_massStorage)
-        amount = GAME_massStorage - GAME_mass;
+          amount = (4 * cell.anabolism) * deltaTime;
 
-      GAME_mass += amount;
-      GAME_energy -= amount / cell.efficiency;
+          if (amount > GAME_energy * cell.efficiency)
+            amount = GAME_energy * cell.efficiency;
+
+          if (GAME_mass + amount > GAME_massStorage)
+            amount = GAME_massStorage - GAME_mass;
+
+          GAME_mass += amount;
+          GAME_energy -= amount / cell.efficiency;
+        }
+
+      if (!GAME_RequireEnergy (GAME_cells.length * deltaTime * GAME_ENERGY_CELL_UPKEEP / cell.efficiency))
+        GAME_energy = 0;
+
+      if (GAME_energy > GAME_energyStorage)
+        GAME_energy = GAME_energyStorage;
+
+      if (GAME_mass > GAME_massStorage)
+        GAME_mass = GAME_massStorage;
+
+      if (GAME_health > 100.0)
+        GAME_health = 100.0;
+
+  /*********************************************************************/
+
+      GAME_ShootAtBaddies (deltaTime);
+
+      GAME_RepelCells (deltaTime);
+
+  /*********************************************************************/
+
+      GAME_nextBaddieSpawn -= deltaTime;
+
+      if (GAME_nextBaddieSpawn < 0.0)
+        {
+          GAME_baddies.push (GAME_GenerateBaddie ());
+          GAME_nextBaddieSpawn = 6.0 / (1.0 + GAME_difficulty * 0.01);
+        }
     }
-
-  if (!GAME_RequireEnergy (GAME_cells.length * deltaTime * GAME_ENERGY_CELL_UPKEEP / cell.efficiency))
-    GAME_energy = 0;
-
-  if (GAME_energy > GAME_energyStorage)
-    GAME_energy = GAME_energyStorage;
-
-  if (GAME_mass > GAME_massStorage)
-    GAME_mass = GAME_massStorage;
-
-  if (GAME_health > 100.0)
-    GAME_health = 100.0;
-
-  /*********************************************************************/
-
-  GAME_ShootAtBaddies (deltaTime);
-
-  GAME_RepelCells (deltaTime);
-
-  /*********************************************************************/
-
-  GAME_nextBaddieSpawn -= deltaTime;
-
-  if (GAME_nextBaddieSpawn < 0.0)
+  else if (GAME_shake <= 0) /* GAME_over */
     {
-      GAME_baddies.push (GAME_GenerateBaddie ());
-      GAME_nextBaddieSpawn = 6.0 / (1.0 + GAME_difficulty * 0.01);
+      VEC_CruiseTo (GAME_camera, { x: 0, y: -gl.viewportHeight }, 2000, 1e6, deltaTime);
+
+      DRAW_AddQuad (GFX_score, 0, -gl.viewportHeight, 512, 256);
     }
 
   for (i = 0; i < GAME_baddies.length; )
     {
-      var baddie;
+      var baddie, mag;
 
       baddie = GAME_baddies[i];
 
+      baddie.age += deltaTime;
+
+      mag = 1.0 / Math.sqrt (baddie.x * baddie.x + baddie.y * baddie.y);
+      baddie.velX -= GAME_BADDIE_ACCELERATION * baddie.x * mag * deltaTime;
+      baddie.velY -= GAME_BADDIE_ACCELERATION * baddie.y * mag * deltaTime;
+
+      mag = Math.sqrt (baddie.velX * baddie.velX + baddie.velY * baddie.velY);
+
+      if (mag > 50)
+        {
+          baddie.velX = baddie.velX * 50.0 / mag;
+          baddie.velY = baddie.velY * 50.0 / mag;
+        }
+
       baddie.x += baddie.velX * deltaTime;
       baddie.y += baddie.velY * deltaTime;
-      baddie.angle += deltaTime;
+      baddie.angle += deltaTime * mag / 50.0;
 
-      if (baddie.x * baddie.x + baddie.y * baddie.y < (GAME_BLOB_RADIUS + baddie.radius) * (GAME_BLOB_RADIUS + baddie.radius))
+      if (!GAME_over
+          && baddie.x * baddie.x + baddie.y * baddie.y < (GAME_BLOB_RADIUS + baddie.radius) * (GAME_BLOB_RADIUS + baddie.radius))
         {
           GAME_baddies.splice(i, 1);
           GAME_health -= GAME_BADDIE_DAMAGE;
@@ -1273,45 +1341,51 @@ function GAME_Update ()
           continue;
         }
 
-      for (j = 0; j < GAME_baddies.length; )
+      if (!GAME_over)
         {
-          var baddie, dx, dy;
-
-          baddie = GAME_baddies[j];
-
-          dx = baddie.x - projectile.x;
-          dy = baddie.y - projectile.y;
-
-          if (dx * dx + dy * dy < (baddie.radius + projectile.mass) * (baddie.radius + projectile.mass))
+          for (j = 0; j < GAME_baddies.length; )
             {
-              var amount;
+              var baddie, dx, dy;
 
-              GAME_projectiles.splice (i, 1);
+              baddie = GAME_baddies[j];
 
-              amount = projectile.mass * 10.0;
+              dx = baddie.x - projectile.x;
+              dy = baddie.y - projectile.y;
 
-              if (baddie.health < amount)
-                amount = baddie.health;
+              if (dx * dx + dy * dy < (baddie.radius + projectile.mass) * (baddie.radius + projectile.mass))
+                {
+                  var amount;
 
-              baddie.health -= amount;
+                  GAME_projectiles.splice (i, 1);
 
-              if (baddie.health < 5)
-                GAME_baddies.splice(j, 1);
+                  amount = projectile.mass * 10.0;
 
-              break;
+                  if (baddie.health < amount)
+                    amount = baddie.health;
+
+                  baddie.health -= amount;
+
+                  if (baddie.health < 5)
+                    GAME_baddies.splice(j, 1);
+
+                  break;
+                }
+
+              ++j;
             }
 
-          ++j;
+          if (j != GAME_baddies.length)
+            continue;
         }
-
-      if (j != GAME_baddies.length)
-        continue;
 
       ++i;
     }
 
   if (GAME_health < 0)
-    GAME_health = 0;
+    {
+      GAME_over = true;
+      GAME_health = 0;
+    }
 
   GAME_difficulty += deltaTime;
 
@@ -1327,23 +1401,8 @@ function GAME_SetupTextures ()
   GFX_solid = DRAW_LoadTexture ("gfx/solid.png");
   GFX_traitLegend = DRAW_LoadTexture ("gfx/trait-legend.png");
   GFX_statLegend = DRAW_LoadTexture ("gfx/stat-legend.png");
+  GFX_score = DRAW_LoadTexture ("gfx/score.png");
 }
-
-var GAME_cellColors =
-[
-  0x77aaee,
-  0x77eeaa,
-  0xaa77ee,
-  0xb3ef1a,
-  0xee77aa,
-  0xeeaa77,
-  0xff1ab3,
-  0xffb219,
-  0xff3a3a,
-  0x1ab3ff,
-];
-
-var GAME_nextCellColor = 0;
 
 function GAME_GenerateCell ()
 {
@@ -1352,14 +1411,14 @@ function GAME_GenerateCell ()
   result = new Object ();
   result.muzzleVelocity = 1.0;
   result.projectileMass = 1.0;
-  result.fireRate = 1.2;
-  result.aim = 1.3;
-  result.repair = 1.5;
+  result.fireRate = 1.0;
+  result.aim = 1.0;
+  result.repair = 1.0;
   result.efficiency = 1.0;
   result.anabolism = 1.0;
   result.shield = 1.0;
-  result.energyStorage = 1.1;
-  result.massStorage = 1.2;
+  result.energyStorage = 1.0;
+  result.massStorage = 1.0;
   result.nextBullet = 0.0;
   result.x = 0;
   result.y = 0;
@@ -1420,13 +1479,14 @@ function GAME_GenerateBaddie ()
   c = Math.cos (angle);
 
   result = new Object ();
-  result.velX = -c * 50;
-  result.velY = -s * 50;
+  result.velX = 0;
+  result.velY = 0;
   result.x = c * GAME_BADDIE_SPAWN_DISTANCE;
   result.y = s * GAME_BADDIE_SPAWN_DISTANCE;
   result.angle = Math.random ();
   result.health = 100;
   result.nextBlink = GAME_CELL_BLINK_MIN + GAME_CELL_BLINK_EXTRA * Math.random ();
+  result.age = 0;
 
   return result;
 }
