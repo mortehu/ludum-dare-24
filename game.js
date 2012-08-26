@@ -33,6 +33,7 @@ soundManager.onerror = function()
 /***********************************************************************/
 
 var GAME_CELL_COST = 20.0;
+var GAME_CELL_ENERGY_COST = 10.0;
 var GAME_CELL_BLINK_MIN = 5.0;
 var GAME_CELL_BLINK_EXTRA = 4.0;
 var GAME_BADDIE_DAMAGE = 15.0;
@@ -773,7 +774,7 @@ var GAME_projectiles;
 var GAME_over;
 var GAME_energy, GAME_energyStorage;
 var GAME_mass, GAME_massStorage;
-var GAME_health;
+var GAME_health, GAME_healthMax;
 var GAME_score;
 var GAME_mission, GAME_missionScroll;
 var GAME_difficulty;
@@ -785,6 +786,8 @@ var GAME_shake;
 
 var GAME_nextCellColor;
 var GAME_nextBaddieSpawn;
+
+var GAME_paused = false;
 
 function GAME_KeyPressed(e)
 {
@@ -805,10 +808,9 @@ function GAME_KeyPressed(e)
 
       break;
 
-    case 'D':
+    case 'P':
 
-      GAME_health = -1;
-      GAME_shake = 0.5;
+      GAME_paused = !GAME_paused;
 
       break;
     }
@@ -833,13 +835,13 @@ function GAME_ButtonPressed (ev)
 
       if (GAME_over)
         {
-          if (GAME_shake <= 0)
+          if (GAME_shake <= 0 && GAME_camera.y < 0 && !GAME_camera.velY)
             GAME_Reset ();
 
           break;
         }
 
-      if (GAME_focusCell >= 0 && GAME_mass > GAME_CELL_COST && GAME_cells.length < 13 && GAME_RequireEnergy (10))
+      if (GAME_focusCell >= 0 && GAME_mass > GAME_CELL_COST && GAME_cells.length < 13 && GAME_RequireEnergy (GAME_CELL_ENERGY_COST))
         {
           GAME_mass -= GAME_CELL_COST;
           GAME_cells.push (GAME_SplitCell (GAME_cells[GAME_focusCell]));
@@ -1119,7 +1121,7 @@ function GAME_Draw (deltaTime)
   DRAW_SetColor (0.00, 0.00, 0.00, 0.5);
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 60, 400, 10);
   DRAW_SetColor (1.00, 1.00, 1.00, 0.9);
-  i = GAME_health * 4;
+  i = GAME_health / GAME_healthMax * 400;
   DRAW_AddQuad (GFX_solid, 30, gl.viewportHeight - 60, i, 10);
 
   DRAW_SetColor (0.00, 0.00, 0.00, 0.5);
@@ -1324,6 +1326,9 @@ function GAME_ShootAtBaddies (deltaTime)
       if (GAME_mass - GAME_PROJECTILE_MASS <= GAME_CELL_COST)
         continue;
 
+      if (GAME_energy - GAME_CELL_ENERGY_COST <= 10.0 / cell.efficiency)
+        continue;
+
       if (GAME_PROJECTILE_MASS > GAME_mass)
         continue;
 
@@ -1357,6 +1362,15 @@ function GAME_Update ()
   deltaTime = (timeNow - lastTime) * 0.001;
   lastTime = timeNow;
 
+  if (GAME_paused)
+    {
+      GAME_Draw (0);
+
+      SYS_requestedAnimFrame = requestAnimFrame (GAME_Update);
+
+      return;
+    }
+
   if (deltaTime < 0 || deltaTime > 0.033)
     deltaTime = 0.033;
 
@@ -1381,6 +1395,8 @@ function GAME_Update ()
       GAME_energyStorage = GAME_ENERGY_STORAGE_BASE;
       GAME_massStorage = GAME_MASS_STORAGE_BASE;
 
+      GAME_healthMax = 100.0;
+
       for (i = 0; i < GAME_cells.length; ++i)
         {
           var cell, amount;
@@ -1397,6 +1413,7 @@ function GAME_Update ()
 
           GAME_mass += amount;
           GAME_energy -= amount / cell.efficiency;
+          GAME_healthMax += cell.shield;
         }
 
       if (!GAME_RequireEnergy (GAME_cells.length * deltaTime * GAME_ENERGY_CELL_UPKEEP / cell.efficiency))
@@ -1408,7 +1425,7 @@ function GAME_Update ()
       if (GAME_mass > GAME_massStorage)
         GAME_mass = GAME_massStorage;
 
-      if (GAME_health > 100.0)
+      if (GAME_health > GAME_healthMax)
         GAME_health = 100.0;
 
   /*********************************************************************/
@@ -1441,14 +1458,14 @@ function GAME_Update ()
       baddie.age += deltaTime;
 
       mag = 1.0 / Math.sqrt (baddie.x * baddie.x + baddie.y * baddie.y);
-      force = GAME_BADDIE_ACCELERATION * (1.0 + GAME_difficulty * 0.02) * mag * deltaTime;
+      force = GAME_BADDIE_ACCELERATION * (1.0 + GAME_difficulty * 0.01) * mag * deltaTime;
 
       baddie.velX -= force * baddie.x;
       baddie.velY -= force * baddie.y;
 
       mag = Math.sqrt (baddie.velX * baddie.velX + baddie.velY * baddie.velY);
 
-      maxVelocity = 50 * (1.0 + GAME_difficulty * 0.01);
+      maxVelocity = 50 * (1.0 + GAME_difficulty * 0.02);
 
       if (mag > maxVelocity)
         {
@@ -1629,6 +1646,15 @@ function GAME_SplitCell (cell)
 
   GAME_score += 157;
 
+  if (result.efficiency > 10.0)
+    GAME_CompleteMission (2);
+  if (result.anabolism > 10.0)
+    GAME_CompleteMission (3);
+  if (result.fireRate > 10.0)
+    GAME_CompleteMission (4);
+  if (result.shield > 10.0)
+    GAME_CompleteMission (5);
+
   return result;
 }
 
@@ -1659,6 +1685,7 @@ function GAME_Reset ()
   GAME_baddies = new Array ();
   GAME_projectiles = new Array ();
   GAME_health = 100.0;
+  GAME_healthMax = 100.0;
   GAME_over = false;
   GAME_energy = 100.0;
   GAME_energyStorage = 200.0;
