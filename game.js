@@ -402,6 +402,179 @@ function DRAW_AddCircle (texture, centerX, centerY, innerRadius, outerRadius)
     }
 }
 
+function DRAW_AddWobblyCircle (texture, centerX, centerY, innerRadius, outerRadius, wobl)
+{
+  var sector, ps, pc;
+
+  if (texture != DRAW_currentTexture)
+    DRAW_Flush ();
+
+  DRAW_currentTexture = texture;
+
+  ps = 0.0;
+  pc = 1.0;
+
+  if (innerRadius > 0)
+    {
+      /* Adjacent sectors */
+
+      for (sector = 0; sector < 60; ++sector)
+        {
+          var s, c;
+
+          s = Math.sin((sector + 1) / 60 * 2 * Math.PI);
+          c = Math.cos((sector + 1) / 60 * 2 * Math.PI);
+
+          DRAW_vertices.push (centerX + (outerRadius + wobl[sector]) * ps);
+          DRAW_vertices.push (centerY + (outerRadius + wobl[sector]) * pc);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX + (innerRadius + wobl[sector]) * ps);
+          DRAW_vertices.push (centerY + (innerRadius + wobl[sector]) * pc);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX + (innerRadius + wobl[(sector + 1) % 60]) * s);
+          DRAW_vertices.push (centerY + (innerRadius + wobl[(sector + 1) % 60]) * c);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX + (outerRadius + wobl[sector]) * ps);
+          DRAW_vertices.push (centerY + (outerRadius + wobl[sector]) * pc);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX + (innerRadius + wobl[(sector + 1) % 60]) * s);
+          DRAW_vertices.push (centerY + (innerRadius + wobl[(sector + 1) % 60]) * c);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX + (outerRadius + wobl[(sector + 1) % 60]) * s);
+          DRAW_vertices.push (centerY + (outerRadius + wobl[(sector + 1) % 60]) * c);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          ps = s;
+          pc = c;
+        }
+    }
+  else
+    {
+      /* Cake */
+
+      for (sector = 0; sector < 60; ++sector)
+        {
+          var s, c;
+
+          s = Math.sin((sector + 1) / 60 * 2 * Math.PI);
+          c = Math.cos((sector + 1) / 60 * 2 * Math.PI);
+
+          DRAW_vertices.push (centerX + (outerRadius + wobl[sector]) * ps);
+          DRAW_vertices.push (centerY + (outerRadius + wobl[sector]) * pc);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX);
+          DRAW_vertices.push (centerY);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          DRAW_vertices.push (centerX + (outerRadius + wobl[(sector + 1) % 60]) * s);
+          DRAW_vertices.push (centerY + (outerRadius + wobl[(sector + 1) % 60]) * c);
+          DRAW_vertices.push (DRAW_red);
+          DRAW_vertices.push (DRAW_green);
+          DRAW_vertices.push (DRAW_blue);
+          DRAW_vertices.push (DRAW_alpha);
+          DRAW_vertices.push (0.0);
+          DRAW_vertices.push (0.0);
+
+          ps = s;
+          pc = c;
+        }
+    }
+}
+
+function DRAW_AddTriangle (texture, centerX, centerY, radius, angle)
+{
+  var s, c;
+
+  if (texture != DRAW_currentTexture)
+    DRAW_Flush ();
+
+  DRAW_currentTexture = texture;
+
+  s = Math.sin (angle);
+  c = Math.cos (angle);
+  angle += Math.PI * 2 / 3;
+
+  DRAW_vertices.push (centerX + radius * s);
+  DRAW_vertices.push (centerY + radius * c);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
+  DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (0.0);
+  DRAW_vertices.push (0.0);
+
+  s = Math.sin (angle);
+  c = Math.cos (angle);
+  angle += Math.PI * 2 / 3;
+
+  DRAW_vertices.push (centerX + radius * s);
+  DRAW_vertices.push (centerY + radius * c);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
+  DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (0.0);
+  DRAW_vertices.push (0.0);
+
+  s = Math.sin (angle);
+  c = Math.cos (angle);
+
+  DRAW_vertices.push (centerX + radius * s);
+  DRAW_vertices.push (centerY + radius * c);
+  DRAW_vertices.push (DRAW_red);
+  DRAW_vertices.push (DRAW_green);
+  DRAW_vertices.push (DRAW_blue);
+  DRAW_vertices.push (DRAW_alpha);
+  DRAW_vertices.push (0.0);
+  DRAW_vertices.push (0.0);
+}
+
 function DRAW_AddMouth (texture, centerX, centerY, innerRadius, outerRadius)
 {
   var sector, ps, pc, sectorCount;
@@ -767,10 +940,12 @@ var GAME_cellColors =
   0xeeaa77, 0xff1ab3, 0xffb219, 0xff3a3a, 0x1ab3ff
 ];
 
+var GAME_wobl;
 var GAME_camera = { x: 0, y: 0, velX: 0, velY: 0 };
 var GAME_cells;
 var GAME_baddies;
 var GAME_projectiles;
+var GAME_particles;
 var GAME_over;
 var GAME_energy, GAME_energyStorage;
 var GAME_mass, GAME_massStorage;
@@ -897,16 +1072,62 @@ function GAME_Draw (deltaTime)
 
   DRAW_SetColor (0.1, 0.4, 0.5, 1.0);
 
-  DRAW_AddCircle (GFX_solid, blobX, blobY,
-                  GAME_BLOB_RADIUS,         /* inner radius */
-                  GAME_BLOB_RADIUS + 5);    /* outer radius */
+  DRAW_AddWobblyCircle (GFX_solid, blobX, blobY,
+                        GAME_BLOB_RADIUS,         /* inner radius */
+                        GAME_BLOB_RADIUS + 5,     /* outer radius */
+                        GAME_wobl);
 
   DRAW_SetBlendMode (0);
 
   DRAW_SetColor (0.1, 0.4, 0.5, 0.3);
-  DRAW_AddCircle (GFX_solid, blobX, blobY,
-                  0,                        /* inner radius */
-                  GAME_BLOB_RADIUS);        /* outer radius */
+  DRAW_AddWobblyCircle (GFX_solid, blobX, blobY,
+                        0,                        /* inner radius */
+                        GAME_BLOB_RADIUS,         /* outer radius */
+                        GAME_wobl);
+
+  DRAW_SetBlendMode (0);
+
+  for (i = 0; i < GAME_particles.length; )
+    {
+      var particle = GAME_particles[i];
+
+      particle.ttl -= deltaTime;
+      particle.a += deltaTime * particle.velA;
+      particle.r += deltaTime * particle.velR;
+
+      if (particle.ttl < 0 || particle.a < 0 || particle.r < 0)
+        {
+          GAME_particles.splice (i, 1);
+
+          continue;
+        }
+
+      if (particle.a > 1)
+        particle.a = 1;
+
+      particle.x += particle.velX * deltaTime;
+      particle.y += particle.velY * deltaTime;
+
+      DRAW_SetColor (particle.red, particle.green, particle.blue, particle.a);
+
+      switch (particle.type)
+        {
+        case 0:
+
+          DRAW_AddCircle (GFX_solid, blobX + particle.x, blobY + particle.y, 0, particle.r);
+
+          break;
+
+        case 1:
+
+          particle.angle += particle.velAngle * deltaTime;
+          DRAW_AddTriangle (GFX_solid, blobX + particle.x, blobY + particle.y, particle.r, particle.angle);
+
+          break;
+        }
+
+      ++i;
+    }
 
   DRAW_SetBlendMode (-1);
 
@@ -1388,6 +1609,18 @@ function GAME_ShootAtBaddies (deltaTime)
     }
 }
 
+function GAME_DeWobble ()
+{
+  var i, newWobl;
+
+  newWobl = [];
+
+  for (i = 0; i < GAME_wobl.length; ++i)
+    newWobl.push (0.99 * (GAME_wobl[i] + (-2.0 * GAME_wobl[i] + GAME_wobl[(i + 1) % 60] + GAME_wobl[(i + 59) % 60]) * 0.3));
+
+  GAME_wobl = newWobl;
+}
+
 function GAME_Update ()
 {
   var i, j, timeNow, deltaTime;
@@ -1416,6 +1649,8 @@ function GAME_Update ()
     }
 
   /*********************************************************************/
+
+  GAME_DeWobble ();
 
   if (!GAME_over)
     {
@@ -1463,7 +1698,7 @@ function GAME_Update ()
         GAME_mass = GAME_massStorage;
 
       if (GAME_health > GAME_healthMax)
-        GAME_health = 100.0;
+        GAME_health = GAME_healthMax;
 
   /*********************************************************************/
 
@@ -1512,13 +1747,57 @@ function GAME_Update ()
       baddie.y += baddie.velY * deltaTime;
       baddie.angle += deltaTime * mag / 50.0;
 
+      baddie.nextTrail -= deltaTime;
+
+      if (baddie.nextTrail < 0)
+        {
+          GAME_particles.push({ x: baddie.x, y: baddie.y, a: 1.0, r: 3.0, red: 1.0, green: 1.0, blue: 1.0, velX: -baddie.velX * 0.5, velY: -baddie.velY * 0.5, velA: -1.0, velR: 0.1, ttl: Infinity, type: 0 });
+
+          baddie.nextTrail = 0.2;
+        }
+
       if (!GAME_over
           && baddie.x * baddie.x + baddie.y * baddie.y < (GAME_BLOB_RADIUS + baddie.radius) * (GAME_BLOB_RADIUS + baddie.radius))
         {
+          var angle, mag, impactX, impactY;
+
+          angle = Math.atan2 (baddie.velY, baddie.velX) + Math.PI;
+          mag = Math.sqrt (baddie.velX * baddie.velX + baddie.velY * baddie.velY);
+
+          impactX = GAME_BLOB_RADIUS * Math.cos (angle);
+          impactY = GAME_BLOB_RADIUS * Math.sin (angle);
+
+          for (j = 0; j < Math.floor (0.3 * baddie.health); ++j)
+            {
+              GAME_particles.push({
+                x: impactX,
+                y: impactY,
+                a: 1.0,
+                r: 5.0,
+                red: 1.0,
+                green: 0.0,
+                blue: 0.3,
+                angle: Math.random (),
+                velX: Math.cos (angle + Math.random () * 3.0 - 1.5) * mag * (0.1 + Math.random ()),
+                velY: Math.sin (angle + Math.random () * 3.0 - 1.5) * mag * (0.1 + Math.random ()),
+                velA: -1.0,
+                velR: 0.1,
+                velAngle: 1.0,
+                ttl: Infinity,
+                type: 1
+                });
+            }
+
           GAME_health -= GAME_BADDIE_DAMAGE * baddie.health / 100;
           GAME_shake = 0.5;
 
           GAME_baddies.splice(i, 1);
+
+          j = Math.floor (120 - angle * 30 / Math.PI + 45);
+
+
+          for (var k = 0; k < 60; ++k)
+            GAME_wobl[(j + k) % 60] += 10 * Math.pow (Math.cos (k * Math.PI / 30.0), 5);
 
           for (j = 0; j < GAME_cells.length; ++j)
             {
@@ -1726,6 +2005,7 @@ function GAME_GenerateBaddie ()
   result.x = c * GAME_BADDIE_SPAWN_DISTANCE;
   result.y = s * GAME_BADDIE_SPAWN_DISTANCE;
   result.angle = Math.random ();
+  result.nextTrail = 0.0;
   result.health = 100;
   result.nextBlink = GAME_CELL_BLINK_MIN + GAME_CELL_BLINK_EXTRA * Math.random ();
   result.age = 0;
@@ -1735,9 +2015,17 @@ function GAME_GenerateBaddie ()
 
 function GAME_Reset ()
 {
+  var i;
+
+  GAME_wobl = [];
+
+  for (i = 0; i < 60; ++i)
+    GAME_wobl.push (0);
+
   GAME_cells = [];
   GAME_baddies = [];
   GAME_projectiles = [];
+  GAME_particles = [];
   GAME_health = 100.0;
   GAME_healthMax = 100.0;
   GAME_over = false;
