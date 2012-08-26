@@ -864,7 +864,7 @@ function GAME_ButtonPressed (ev)
 
           GAME_cells.splice (GAME_focusCell, 1);
           GAME_focusCell = -1;
-          GAME_mass += 15;
+          GAME_mass += 5;
 
           GAME_CompleteMission (1);
         }
