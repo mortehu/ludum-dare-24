@@ -614,10 +614,15 @@ function VEC_CruiseTo (position, target, maxAcceleration, maxVelocity, deltaTime
   dirY = target.y - position.y;
   distance = Math.sqrt (dirX * dirX + dirY * dirY);
 
-  if (distance)
+  if (distance > 1.0e-3)
     {
       dirX /= distance;
       dirY /= distance;
+    }
+  else
+    {
+      distance = 0.0;
+      dirX = dirY = 0.0;
     }
 
   targetVelocity = Math.sqrt (distance / maxAcceleration) * maxAcceleration;
@@ -637,6 +642,9 @@ function VEC_CruiseTo (position, target, maxAcceleration, maxVelocity, deltaTime
   deltaVelocityY = targetVelocityY - position.velY;
 
   deltaVelocity = Math.sqrt (deltaVelocityX * deltaVelocityX + deltaVelocityY * deltaVelocityY);
+
+  if (deltaVelocity < 1.0e-3)
+    deltaVelocity = 0.0;
 
   /* Can we reach the target velocity in less than `deltaTime' seconds? */
   if (deltaVelocity < maxAcceleration * deltaTime)
