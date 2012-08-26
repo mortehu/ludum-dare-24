@@ -1757,7 +1757,7 @@ function GAME_Update ()
         }
 
       if (!GAME_over
-          && baddie.x * baddie.x + baddie.y * baddie.y < (GAME_BLOB_RADIUS + baddie.radius) * (GAME_BLOB_RADIUS + baddie.radius))
+          && baddie.x * baddie.x + baddie.y * baddie.y < (GAME_BLOB_RADIUS + baddie.radius - 5) * (GAME_BLOB_RADIUS + baddie.radius - 5))
         {
           var angle, mag, impactX, impactY;
 
