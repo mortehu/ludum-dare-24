@@ -604,12 +604,12 @@ function DRAW_AddQuadST (texture, x, y, width, height, s0, t0, s1, t1)
   DRAW_vertices.push (t0);
 }
 
-function DRAW_AddNumber (number, x, y)
+function DRAW_AddNumber (number, x, y, align)
 {
   var result;
 
-  if (number)
-    x += Math.floor (Math.log(number) / Math.log(10)) * 29 * 0.5;
+  if (align && number)
+    x += Math.floor (Math.log(number) / Math.log(10)) * 29 * align;
 
   result = x + 29;
 
@@ -786,6 +786,9 @@ var GAME_shake;
 
 var GAME_nextCellColor;
 var GAME_nextBaddieSpawn;
+
+var GAME_scoreAnim;
+var GAME_scoreAnimAmount;
 
 var GAME_paused = false;
 
@@ -1149,7 +1152,7 @@ function GAME_Draw (deltaTime)
                       261.0 / 512.0, 38.0 / 256.0);
       yOffset += 50;
 
-      DRAW_AddNumber (Math.floor (GAME_score), gl.viewportWidth * 0.5, yOffset);
+      DRAW_AddNumber (Math.floor (GAME_score), gl.viewportWidth * 0.5, yOffset, 0.5);
       yOffset += 80;
 
       DRAW_AddQuadST (GFX_score,
@@ -1159,7 +1162,7 @@ function GAME_Draw (deltaTime)
                       313.0 / 512.0, 121.0 / 256.0);
       yOffset += 60;
 
-      DRAW_AddNumber (Math.floor (GAME_bestScore), gl.viewportWidth * 0.5, yOffset);
+      DRAW_AddNumber (Math.floor (GAME_bestScore), gl.viewportWidth * 0.5, yOffset, 0.5);
     }
 
   VEC_CruiseTo (GAME_missionScroll, { x: 0, y: GAME_mission }, 1.0, 1.0, deltaTime);
@@ -1270,6 +1273,11 @@ function GAME_CompleteMission (nr)
     return;
 
   ++GAME_mission;
+
+  GAME_scoreAnim = 0;
+  GAME_scoreAnimAmount = (nr < 2) ? 500 : 10000;
+
+  GAME_score += 10000;
 }
 
 function GAME_RequireEnergy (amount)
@@ -1565,6 +1573,18 @@ function GAME_Update ()
 
   if (GAME_score > GAME_bestScore)
     GAME_bestScore = GAME_score;
+
+  if (GAME_scoreAnim < 2)
+    {
+      GAME_scoreAnim += deltaTime;
+
+      DRAW_SetColor (1.0, 1.0, 1.0, 1.0 - GAME_scoreAnim * 0.5);
+
+      DRAW_AddNumber (GAME_scoreAnimAmount,
+                      gl.viewportWidth - 517,
+                      gl.viewportHeight - 118 - GAME_scoreAnim * 15,
+                      1);
+    }
 
   /*********************************************************************/
 
