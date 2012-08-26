@@ -932,12 +932,14 @@ function GAME_Draw (deltaTime)
 
       if (GAME_focusCell == i)
         {
+          DRAW_SetBlendMode (0);
           DRAW_SetColor (0.1, 0.4, 0.5, 0.8 * Math.abs (Math.cos (GAME_cursorBlink)));
           DRAW_AddCircle (GFX_solid, x, y,
                           0.0,               /* inner radius */
                           GAME_CELL_RADIUS + 2); /* outer radius */
 
           GAME_cursorBlink += deltaTime * 4.0;
+          DRAW_SetBlendMode (-1);
         }
 
       /* Body */
