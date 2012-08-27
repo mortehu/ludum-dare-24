@@ -967,6 +967,12 @@ function GAME_KeyPressed(e)
 
   switch (String.fromCharCode (e.keyCode))
     {
+    case 'K':
+
+      GAME_KillCell ();
+
+      break;
+
     case 'P':
 
       GAME_paused = !GAME_paused;
@@ -1012,18 +1018,23 @@ function GAME_ButtonPressed (ev)
 
     case 2:
 
-      if (GAME_focusCell >= 0 && GAME_cells.length > 1)
-        {
-          var i;
-
-          GAME_cells.splice (GAME_focusCell, 1);
-          GAME_focusCell = -1;
-          GAME_mass += 5;
-
-          GAME_CompleteMission (1);
-        }
+      GAME_KillCell ();
 
       break;
+    }
+}
+
+function GAME_KillCell ()
+{
+  if (GAME_focusCell >= 0 && GAME_cells.length > 1)
+    {
+      var i;
+
+      GAME_cells.splice (GAME_focusCell, 1);
+      GAME_focusCell = -1;
+      GAME_mass += 5;
+
+      GAME_CompleteMission (1);
     }
 }
 
