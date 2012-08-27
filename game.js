@@ -904,7 +904,7 @@ function SYS_Init ()
   document.onkeydown = function (event) { GAME_KeyPressed (event); };
   document.onkeyup = function (event) { GAME_KeyRelease (event); };
   canvas.onmousemove = function (event) { GAME_MouseMoved (event, this); return false; }
-  document.onmousedown = function () { GAME_ButtonPressed (event); return false; }
+  document.onmousedown = function (event) { GAME_ButtonPressed (event); return false; }
   canvas.onselectstart = function () { return false; }
   canvas.oncontextmenu = function () { return false; }
 }
