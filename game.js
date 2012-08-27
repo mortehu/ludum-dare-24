@@ -17,23 +17,6 @@
 
 /***********************************************************************/
 
-soundManager.preferFlash = true;
-soundManager.flashVersion = 9;
-soundManager.url = 'swf/';
-
-soundManager.onload = function()
-{
-  soundManager.createSound({ id:'blob-damage', url:'sfx/blob-damage.mp3', multiShot: true, autoLoad: true });
-  soundManager.createSound({ id:'baddie-spawn', url:'sfx/baddie-spawn.mp3', multiShot: true, autoLoad: true });
-  soundManager.createSound({ id:'baddie-hit', url:'sfx/baddie-hit.mp3', multiShot: true, autoLoad: true });
-}
-
-soundManager.onerror = function()
-{
-}
-
-/***********************************************************************/
-
 var GAME_CELL_COST = 20.0;
 var GAME_CELL_ENERGY_COST = 10.0;
 var GAME_CELL_BLINK_MIN = 5.0;
@@ -984,12 +967,6 @@ function GAME_KeyPressed(e)
 
   switch (String.fromCharCode (e.keyCode))
     {
-    case 'F':
-
-      soundManager.play('blob-damage', {volume:100});
-
-      break;
-
     case 'P':
 
       GAME_paused = !GAME_paused;
@@ -1714,7 +1691,6 @@ function GAME_Update ()
 
       if (GAME_nextBaddieSpawn < 0.0)
         {
-          soundManager.play ('baddie-spawn', {volume:20});
           GAME_baddies.push (GAME_GenerateBaddie ());
           GAME_nextBaddieSpawn = 6.0 / (1.0 + Math.pow (GAME_difficulty, 1.1) * 0.010);
         }
@@ -1791,8 +1767,6 @@ function GAME_Update ()
                 });
             }
 
-          soundManager.play('blob-damage', {volume:100});
-
           GAME_health -= GAME_BADDIE_DAMAGE * baddie.health / 100;
           GAME_shake = 0.5;
 
@@ -1865,8 +1839,6 @@ function GAME_Update ()
 
                       GAME_baddies.splice(j, 1);
                     }
-
-                  soundManager.play ('baddie-hit', {volume:80});
 
                   break;
                 }
